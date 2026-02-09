@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#4A90D9">
+<link rel="manifest" href="manifest.json">
+<title>Daily Planner</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root {
+    --primary: #4A90D9;
+    --primary-light: #E8F0FE;
+    --primary-dark: #2E6BB5;
+    --bg: #F8F9FA;
+    --card: #FFFFFF;
+    --text: #1A1A2E;
+    --text-muted: #8E8E93;
+    --text-light: #AEAEB2;
+    --border: #E5E5EA;
+    --success: #34C759;
+    --danger: #FF3B30;
+    --office: #FF9500;
+    --office-light: #FFF3E0;
+    --remote: #5AC8FA;
+    --remote-light: #E3F7FD;
+    --current-hour: #FFFDE7;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    padding-bottom: 100px;
+  }
+
+  /* Header */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .header-top {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: var(--bg);
+    border-radius: 50%; cursor: pointer;
+    font-size: 18px; color: var(--primary);
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-btn:active { background: var(--primary-light); }
+  .header-date {
+    text-align: center; flex: 1;
+  }
+  .header-date h1 {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .header-date .subtitle {
+    font-size: 13px; color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .today-btn {
+    font-size: 12px; font-weight: 600;
+    color: var(--primary); background: var(--primary-light);
+    border: none; border-radius: 16px;
+    padding: 4px 12px; cursor: pointer;
+    margin-top: 4px;
+    display: none;
+  }
+  .today-btn.visible { display: inline-block; }
+  .today-btn:active { background: var(--primary); color: white; }
+
+  /* Day type badge */
+  .day-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 10px; border-radius: 12px;
+    margin-top: 4px;
+  }
+  .day-badge.office { background: var(--office-light); color: #E65100; }
+  .day-badge.remote { background: var(--remote-light); color: #0277BD; }
+
+  /* Time blocks */
+  .timeline {
+    padding: 8px 12px;
+  }
+  .time-block {
+    display: flex; gap: 10px;
+    padding: 4px 0;
+    min-height: 44px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.3s;
+  }
+  .time-block.current-hour {
+    background: var(--current-hour);
+    border-radius: var(--radius-sm);
+    margin: 0 -8px;
+    padding: 4px 8px;
+  }
+  .time-block.empty { min-height: 32px; opacity: 0.5; }
+  .time-block.empty .time-label { font-size: 12px; }
+  .time-label {
+    width: 52px; flex-shrink: 0;
+    font-size: 13px; font-weight: 600;
+    color: var(--text-muted);
+    padding-top: 8px;
+    text-align: right;
+    padding-right: 8px;
+  }
+  .time-block.current-hour .time-label { color: var(--primary); }
+  .block-tasks {
+    flex: 1; display: flex; flex-direction: column; gap: 4px;
+    padding: 4px 0;
+    min-height: 36px;
+  }
+
+  /* Tasks */
+  .task-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    animation: slideIn 0.25s ease;
+    cursor: grab;
+  }
+  .task-item.dragging { opacity: 0.5; transform: scale(0.96); }
+  .task-item.drag-over { border: 2px dashed var(--primary); }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .task-checkbox {
+    width: 24px; height: 24px; flex-shrink: 0;
+    border: 2px solid var(--border);
+    border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .task-checkbox:active { transform: scale(0.9); }
+  .task-item.completed .task-checkbox {
+    background: var(--success); border-color: var(--success);
+  }
+  .task-checkbox svg { width: 14px; height: 14px; opacity: 0; transition: opacity 0.2s; }
+  .task-item.completed .task-checkbox svg { opacity: 1; }
+  .task-title {
+    flex: 1; font-size: 15px; line-height: 1.3;
+    transition: all 0.3s;
+  }
+  .task-item.completed .task-title {
+    text-decoration: line-through;
+    color: var(--text-light);
+  }
+  .task-tag {
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 10px;
+    white-space: nowrap;
+  }
+  .task-tag.office { background: var(--office-light); color: #E65100; }
+  .task-tag.remote { background: var(--remote-light); color: #0277BD; }
+  .task-actions {
+    display: flex; gap: 4px;
+  }
+  .task-action-btn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent;
+    border-radius: 50%; cursor: pointer;
+    font-size: 14px; color: var(--text-muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .task-action-btn:active { background: var(--bg); }
+  .task-action-btn.delete:active { background: #FFE5E5; color: var(--danger); }
+
+  /* Empty block drop zone */
+  .drop-zone {
+    min-height: 8px; border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .drop-zone.drag-over {
+    min-height: 44px; background: var(--primary-light);
+    border: 2px dashed var(--primary);
+  }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 32px; right: 20px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white; border: none;
+    font-size: 28px;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fab:active { transform: scale(0.92); background: var(--primary-dark); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 300;
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 500px;
+    padding: 20px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    max-height: 85dvh;
+    overflow-y: auto;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .modal h2 {
+    font-size: 18px; font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 13px;
+    font-weight: 600; color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .form-group input, .form-group select {
+    width: 100%; padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-appearance: none;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+  }
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-group { flex: 1; }
+  .modal-actions {
+    display: flex; gap: 10px; margin-top: 20px;
+  }
+  .btn {
+    flex: 1; padding: 14px;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 16px; font-weight: 600;
+    cursor: pointer; text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:active { background: var(--primary-dark); }
+  .btn-secondary { background: var(--bg); color: var(--text); }
+  .btn-secondary:active { background: var(--border); }
+
+  /* Recurring tasks settings */
+  .settings-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent;
+    border-radius: 50%; cursor: pointer;
+    font-size: 20px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .settings-btn:active { background: var(--bg); }
+
+  .recurring-list { list-style: none; }
+  .recurring-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+  }
+  .recurring-item .info { flex: 1; }
+  .recurring-item .info .name { font-size: 15px; font-weight: 600; }
+  .recurring-item .info .meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Swipe hint */
+  .swipe-area {
+    touch-action: pan-y;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 0; }
+
+  /* Safe area for notch phones */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .header { padding-top: calc(12px + env(safe-area-inset-top)); }
+    body { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+    .fab { bottom: calc(32px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <button class="nav-btn" id="prevDay" aria-label="Previous day">&#8249;</button>
+    <div class="header-date">
+      <h1 id="dateTitle"></h1>
+      <div class="subtitle" id="dateSubtitle"></div>
+      <div id="dayBadge"></div>
+      <button class="today-btn" id="todayBtn" onclick="goToday()">Today</button>
+    </div>
+    <button class="nav-btn" id="nextDay" aria-label="Next day">&#8250;</button>
+  </div>
+</header>
+
+<main class="timeline swipe-area" id="timeline"></main>
+
+<button class="fab" id="fabAdd" aria-label="Add task">+</button>
+
+<!-- Add/Edit Task Modal -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modalTitle">Add Task</h2>
+    <div class="form-group">
+      <label>Task Name</label>
+      <input type="text" id="taskNameInput" placeholder="e.g. Team standup" autocomplete="off">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Time Block</label>
+        <select id="taskHourSelect"></select>
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="taskTypeSelect">
+          <option value="any">Any Day</option>
+          <option value="office">Office Only</option>
+          <option value="remote">Remote Only</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Recurrence</label>
+      <select id="taskRecurrence">
+        <option value="none">One-time (this day only)</option>
+        <option value="daily">Every day</option>
+        <option value="weekdays">Every weekday</option>
+        <option value="office">Every office day</option>
+        <option value="remote">Every remote day</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveTaskBtn" onclick="saveTask()">Add Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recurring Tasks Modal -->
+<div class="modal-overlay" id="recurringModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Recurring Tasks</h2>
+    <ul class="recurring-list" id="recurringList"></ul>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeRecurringModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======== STATE ========
+const START_HOUR = 6;
+const END_HOUR = 22;
+const OFFICE_START = new Date(2026, 1, 10); // Feb 10, 2026
+
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+let editingTaskId = null;
+
+// ======== STORAGE ========
+function loadData(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) || fallback; }
+  catch { return fallback; }
+}
+function saveData(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function getTasks() { return loadData('planner_tasks', []); }
+function saveTasks(tasks) { saveData('planner_tasks', tasks); }
+function getRecurring() { return loadData('planner_recurring', []); }
+function saveRecurring(recs) { saveData('planner_recurring', recs); }
+
+// ======== OFFICE CADENCE ========
+function isOfficeDay(date) {
+  const day = date.getDay();
+  if (day !== 2 && day !== 3) return false; // Only Tue & Wed
+  // Calculate weeks since start
+  const diffMs = date.getTime() - OFFICE_START.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+  const weekNum = Math.floor(diffDays / 7);
+  // OFFICE_START is week 0 (office week). Even weeks = office, odd = remote.
+  // Adjust: OFFICE_START is a Tuesday in week 0
+  const startWeekMonday = new Date(OFFICE_START);
+  startWeekMonday.setDate(startWeekMonday.getDate() - startWeekMonday.getDay() + 1);
+  const dateWeekMonday = new Date(date);
+  dateWeekMonday.setDate(dateWeekMonday.getDate() - dateWeekMonday.getDay() + 1);
+  const weekDiff = Math.round((dateWeekMonday - startWeekMonday) / (7 * 86400000));
+  return weekDiff % 2 === 0;
+}
+
+function getDayType(date) {
+  const day = date.getDay();
+  if (day === 0 || day === 6) return 'weekend';
+  if (isOfficeDay(date)) return 'office';
+  return 'remote';
+}
+
+// ======== DATE HELPERS ========
+function dateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function formatDate(d) {
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+function formatYear(d) {
+  return d.getFullYear();
+}
+function isToday(d) {
+  const t = new Date(); t.setHours(0,0,0,0);
+  return d.getTime() === t.getTime();
+}
+function formatHour(h) {
+  if (h === 0) return '12 AM';
+  if (h < 12) return h + ' AM';
+  if (h === 12) return '12 PM';
+  return (h - 12) + ' PM';
+}
+
+// ======== GENERATE ID ========
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+// ======== GET TASKS FOR DATE ========
+function getTasksForDate(date) {
+  const key = dateKey(date);
+  const dayType = getDayType(date);
+  const allTasks = getTasks().filter(t => t.date === key);
+
+  // Add recurring tasks
+  const recurring = getRecurring();
+  const dow = date.getDay();
+
+  recurring.forEach(r => {
+    // Check if already instantiated for this date
+    if (allTasks.some(t => t.recurringId === r.id)) return;
+
+    let shouldShow = false;
+    if (r.recurrence === 'daily') shouldShow = true;
+    else if (r.recurrence === 'weekdays' && dow >= 1 && dow <= 5) shouldShow = true;
+    else if (r.recurrence === 'office' && dayType === 'office') shouldShow = true;
+    else if (r.recurrence === 'remote' && dayType === 'remote') shouldShow = true;
+
+    // Also check type constraint
+    if (r.type === 'office' && dayType !== 'office') shouldShow = false;
+    if (r.type === 'remote' && dayType !== 'remote') shouldShow = false;
+
+    if (shouldShow) {
+      const task = {
+        id: uid(),
+        title: r.title,
+        hour: r.hour,
+        date: key,
+        completed: false,
+        recurringId: r.id,
+        type: r.type
+      };
+      allTasks.push(task);
+      // Persist
+      const tasks = getTasks();
+      tasks.push(task);
+      saveTasks(tasks);
+    }
+  });
+
+  return allTasks;
+}
+
+// ======== RENDER ========
+function render() {
+  const dayType = getDayType(currentDate);
+  const today = isToday(currentDate);
+  const nowHour = new Date().getHours();
+
+  // Header
+  document.getElementById('dateTitle').textContent = formatDate(currentDate);
+  document.getElementById('dateSubtitle').textContent = formatYear(currentDate);
+
+  const todayBtn = document.getElementById('todayBtn');
+  todayBtn.classList.toggle('visible', !today);
+
+  // Day badge
+  const badgeEl = document.getElementById('dayBadge');
+  if (dayType === 'office') {
+    badgeEl.innerHTML = '<span class="day-badge office">🏢 In Office</span>';
+  } else if (dayType === 'remote') {
+    badgeEl.innerHTML = '<span class="day-badge remote">🏠 Remote</span>';
+  } else {
+    badgeEl.innerHTML = '<span class="day-badge" style="background:#F3E5F5;color:#7B1FA2">🌙 Weekend</span>';
+  }
+
+  // Tasks
+  const tasks = getTasksForDate(currentDate);
+
+  // Timeline
+  const timeline = document.getElementById('timeline');
+  let html = '';
+
+  for (let h = START_HOUR; h <= END_HOUR; h++) {
+    const hourTasks = tasks.filter(t => t.hour === h);
+    const isCurrent = today && h === nowHour;
+    const isEmpty = hourTasks.length === 0;
+
+    html += `<div class="time-block ${isCurrent ? 'current-hour' : ''} ${isEmpty ? 'empty' : ''}" data-hour="${h}">`;
+    html += `<div class="time-label">${formatHour(h)}</div>`;
+    html += `<div class="block-tasks" data-hour="${h}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${h})" ondragleave="onDragLeave(event)">`;
+
+    hourTasks.forEach(task => {
+      html += renderTask(task);
+    });
+
+    if (isEmpty) {
+      html += `<div class="drop-zone" data-hour="${h}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${h})" ondragleave="onDragLeave(event)"></div>`;
+    }
+
+    html += `</div></div>`;
+  }
+
+  timeline.innerHTML = html;
+
+  // Scroll to current hour if today
+  if (today) {
+    const currentBlock = document.querySelector('.current-hour');
+    if (currentBlock) {
+      setTimeout(() => currentBlock.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
+  }
+}
+
+function renderTask(task) {
+  const tagHtml = task.type === 'office'
+    ? '<span class="task-tag office">Office</span>'
+    : task.type === 'remote'
+    ? '<span class="task-tag remote">Remote</span>'
+    : '';
+
+  return `
+    <div class="task-item ${task.completed ? 'completed' : ''}"
+         draggable="true" data-id="${task.id}"
+         ondragstart="onDragStart(event, '${task.id}')"
+         ondragend="onDragEnd(event)">
+      <div class="task-checkbox" onclick="toggleTask('${task.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <span class="task-title">${escHtml(task.title)}</span>
+      ${tagHtml}
+      <div class="task-actions">
+        <button class="task-action-btn" onclick="editTask('${task.id}')" aria-label="Edit">✎</button>
+        <button class="task-action-btn delete" onclick="deleteTask('${task.id}')" aria-label="Delete">✕</button>
+      </div>
+    </div>`;
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ======== TASK ACTIONS ========
+function toggleTask(id) {
+  const tasks = getTasks();
+  const t = tasks.find(t => t.id === id);
+  if (t) { t.completed = !t.completed; saveTasks(tasks); }
+  render();
+}
+
+function deleteTask(id) {
+  const tasks = getTasks().filter(t => t.id !== id);
+  saveTasks(tasks);
+  render();
+}
+
+function editTask(id) {
+  const tasks = getTasks();
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  editingTaskId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Task';
+  document.getElementById('saveTaskBtn').textContent = 'Save';
+  document.getElementById('taskNameInput').value = task.title;
+  document.getElementById('taskHourSelect').value = task.hour;
+  document.getElementById('taskTypeSelect').value = task.type || 'any';
+  document.getElementById('taskRecurrence').value = 'none';
+  document.getElementById('taskRecurrence').parentElement.style.display = 'none';
+  openModal();
+}
+
+// ======== MODAL ========
+function openModal() {
+  document.getElementById('taskModal').classList.add('open');
+  setTimeout(() => document.getElementById('taskNameInput').focus(), 300);
+}
+
+function closeModal() {
+  document.getElementById('taskModal').classList.remove('open');
+  editingTaskId = null;
+  document.getElementById('taskNameInput').value = '';
+  document.getElementById('modalTitle').textContent = 'Add Task';
+  document.getElementById('saveTaskBtn').textContent = 'Add Task';
+  document.getElementById('taskRecurrence').parentElement.style.display = '';
+}
+
+function saveTask() {
+  const name = document.getElementById('taskNameInput').value.trim();
+  if (!name) return;
+
+  const hour = parseInt(document.getElementById('taskHourSelect').value);
+  const type = document.getElementById('taskTypeSelect').value;
+  const recurrence = document.getElementById('taskRecurrence').value;
+
+  if (editingTaskId) {
+    const tasks = getTasks();
+    const t = tasks.find(t => t.id === editingTaskId);
+    if (t) {
+      t.title = name;
+      t.hour = hour;
+      t.type = type;
+      saveTasks(tasks);
+    }
+  } else if (recurrence !== 'none') {
+    // Save as recurring
+    const recs = getRecurring();
+    recs.push({ id: uid(), title: name, hour, type, recurrence });
+    saveRecurring(recs);
+  } else {
+    // One-time task
+    const tasks = getTasks();
+    tasks.push({
+      id: uid(),
+      title: name,
+      hour,
+      date: dateKey(currentDate),
+      completed: false,
+      type
+    });
+    saveTasks(tasks);
+  }
+
+  closeModal();
+  render();
+}
+
+// ======== RECURRING MODAL ========
+function openRecurringModal() {
+  const recs = getRecurring();
+  const list = document.getElementById('recurringList');
+
+  if (recs.length === 0) {
+    list.innerHTML = '<li style="text-align:center;padding:20px;color:var(--text-muted)">No recurring tasks yet. Add one with the + button.</li>';
+  } else {
+    list.innerHTML = recs.map(r => `
+      <li class="recurring-item">
+        <div class="info">
+          <div class="name">${escHtml(r.title)}</div>
+          <div class="meta">${formatHour(r.hour)} · ${r.recurrence} · ${r.type === 'any' ? 'All days' : r.type}</div>
+        </div>
+        <button class="task-action-btn delete" onclick="deleteRecurring('${r.id}')" aria-label="Delete">✕</button>
+      </li>
+    `).join('');
+  }
+
+  document.getElementById('recurringModal').classList.add('open');
+}
+
+function closeRecurringModal() {
+  document.getElementById('recurringModal').classList.remove('open');
+}
+
+function deleteRecurring(id) {
+  const recs = getRecurring().filter(r => r.id !== id);
+  saveRecurring(recs);
+  // Also remove future instances
+  const tasks = getTasks().filter(t => t.recurringId !== id);
+  saveTasks(tasks);
+  openRecurringModal();
+  render();
+}
+
+// ======== DRAG & DROP ========
+let draggedTaskId = null;
+
+function onDragStart(e, id) {
+  draggedTaskId = id;
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragEnd(e) {
+  e.target.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onDrop(e, hour) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!draggedTaskId) return;
+
+  const tasks = getTasks();
+  const t = tasks.find(t => t.id === draggedTaskId);
+  if (t) { t.hour = hour; saveTasks(tasks); }
+  draggedTaskId = null;
+  render();
+}
+
+// ======== NAVIGATION ========
+function changeDay(offset) {
+  currentDate.setDate(currentDate.getDate() + offset);
+  render();
+}
+
+function goToday() {
+  currentDate = new Date();
+  currentDate.setHours(0,0,0,0);
+  render();
+}
+
+// Touch swipe
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    changeDay(dx < 0 ? 1 : -1);
+  }
+}, { passive: true });
+
+// Button nav
+document.getElementById('prevDay').addEventListener('click', () => changeDay(-1));
+document.getElementById('nextDay').addEventListener('click', () => changeDay(1));
+
+// FAB
+document.getElementById('fabAdd').addEventListener('click', () => {
+  editingTaskId = null;
+  document.getElementById('taskRecurrence').parentElement.style.display = '';
+  openModal();
+});
+
+// Close modals on overlay click
+document.getElementById('taskModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.getElementById('recurringModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeRecurringModal();
+});
+
+// Enter key
+document.getElementById('taskNameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveTask();
+});
+
+// Populate hour select
+const hourSelect = document.getElementById('taskHourSelect');
+for (let h = START_HOUR; h <= END_HOUR; h++) {
+  const opt = document.createElement('option');
+  opt.value = h;
+  opt.textContent = formatHour(h);
+  // Default to current hour or 9 AM
+  const now = new Date().getHours();
+  if (h === (now >= START_HOUR && now <= END_HOUR ? now : 9)) opt.selected = true;
+  hourSelect.appendChild(opt);
+}
+
+// ======== INIT ========
+render();
+
+// Auto-refresh every minute to update current hour highlight
+setInterval(() => { if (isToday(currentDate)) render(); }, 60000);
+
+// PWA Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
