@@ -280,6 +280,14 @@
     color: var(--text-tertiary);
   }
 
+  .task-time {
+    font-size: 11px; font-weight: 500;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    letter-spacing: 0.1px;
+  }
+  .task-item.completed .task-time { color: var(--text-tertiary); opacity: 0.6; }
+
   .task-meta {
     display: flex; align-items: center; gap: 6px;
     margin-top: 3px;
@@ -519,17 +527,21 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Time</label>
+        <label>Start</label>
         <select id="taskHourSelect"></select>
       </div>
       <div class="form-group">
-        <label>Day Type</label>
-        <select id="taskTypeSelect">
-          <option value="any">Any Day</option>
-          <option value="office">Office Only</option>
-          <option value="remote">Remote Only</option>
-        </select>
+        <label>End</label>
+        <select id="taskEndSelect"></select>
       </div>
+    </div>
+    <div class="form-group">
+      <label>Day Type</label>
+      <select id="taskTypeSelect">
+        <option value="any">Any Day</option>
+        <option value="office">Office Only</option>
+        <option value="remote">Remote Only</option>
+      </select>
     </div>
     <div class="form-group">
       <label>Repeat</label>
@@ -638,7 +650,7 @@ function getTasksForDate(date) {
     if (r.type === 'remote' && dayType !== 'remote') shouldShow = false;
 
     if (shouldShow) {
-      const task = { id: uid(), title: r.title, hour: r.hour, date: key, completed: false, recurringId: r.id, type: r.type };
+      const task = { id: uid(), title: r.title, hour: r.hour, endHour: r.endHour || r.hour + 0.5, date: key, completed: false, recurringId: r.id, type: r.type };
       allTasks.push(task);
       const tasks = getTasks();
       tasks.push(task);
@@ -710,6 +722,9 @@ function renderTask(task) {
     ? '<span class="task-tag remote">Remote</span>'
     : '';
 
+  const endHour = task.endHour != null ? task.endHour : task.hour + 0.5;
+  const timeStr = formatSlot(task.hour) + ' – ' + formatSlot(endHour);
+
   return `
     <div class="task-item ${task.completed ? 'completed' : ''}"
          draggable="true" data-id="${task.id}"
@@ -722,6 +737,7 @@ function renderTask(task) {
       </div>
       <div class="task-body">
         <div class="task-title">${escHtml(task.title)}</div>
+        <div class="task-time">${timeStr}</div>
         ${tagHtml ? '<div class="task-meta">' + tagHtml + '</div>' : ''}
       </div>
       <div class="task-actions">
@@ -762,6 +778,8 @@ function editTask(id) {
   document.getElementById('saveTaskBtn').textContent = 'Save';
   document.getElementById('taskNameInput').value = task.title;
   document.getElementById('taskHourSelect').value = String(task.hour);
+  const endVal = task.endHour != null ? task.endHour : task.hour + 0.5;
+  document.getElementById('taskEndSelect').value = String(endVal);
   document.getElementById('taskTypeSelect').value = task.type || 'any';
   document.getElementById('taskRecurrence').value = 'none';
   document.getElementById('taskRecurrence').parentElement.style.display = 'none';
@@ -781,26 +799,32 @@ function closeModal() {
   document.getElementById('modalTitle').textContent = 'New Task';
   document.getElementById('saveTaskBtn').textContent = 'Add Task';
   document.getElementById('taskRecurrence').parentElement.style.display = '';
+  // Reset start/end to defaults
+  const s = (nowH >= START_HOUR && nowH <= END_HOUR) ? nowH + (nowM >= 30 ? 0.5 : 0) : 9;
+  document.getElementById('taskHourSelect').value = String(s);
+  document.getElementById('taskEndSelect').value = String(s + 0.5);
 }
 
 function saveTask() {
   const name = document.getElementById('taskNameInput').value.trim();
   if (!name) return;
   const hour = parseFloat(document.getElementById('taskHourSelect').value);
+  let endHour = parseFloat(document.getElementById('taskEndSelect').value);
+  if (endHour <= hour) endHour = hour + 0.5; // end must be after start
   const type = document.getElementById('taskTypeSelect').value;
   const recurrence = document.getElementById('taskRecurrence').value;
 
   if (editingTaskId) {
     const tasks = getTasks();
     const t = tasks.find(t => t.id === editingTaskId);
-    if (t) { t.title = name; t.hour = hour; t.type = type; saveTasks(tasks); }
+    if (t) { t.title = name; t.hour = hour; t.endHour = endHour; t.type = type; saveTasks(tasks); }
   } else if (recurrence !== 'none') {
     const recs = getRecurring();
-    recs.push({ id: uid(), title: name, hour, type, recurrence });
+    recs.push({ id: uid(), title: name, hour, endHour, type, recurrence });
     saveRecurring(recs);
   } else {
     const tasks = getTasks();
-    tasks.push({ id: uid(), title: name, hour, date: dateKey(currentDate), completed: false, type });
+    tasks.push({ id: uid(), title: name, hour, endHour, date: dateKey(currentDate), completed: false, type });
     saveTasks(tasks);
   }
   closeModal();
@@ -818,7 +842,7 @@ function openRecurringModal() {
       <li class="recurring-item">
         <div class="info">
           <div class="name">${escHtml(r.title)}</div>
-          <div class="meta">${formatHour(r.hour)} &middot; ${r.recurrence} &middot; ${r.type === 'any' ? 'All days' : r.type}</div>
+          <div class="meta">${formatSlot(r.hour)} – ${formatSlot(r.endHour || r.hour + 0.5)} &middot; ${r.recurrence} &middot; ${r.type === 'any' ? 'All days' : r.type}</div>
         </div>
         <button class="task-action-btn delete" onclick="deleteRecurring('${r.id}')" aria-label="Delete">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -864,7 +888,12 @@ function onDrop(e, hour) {
   if (!draggedTaskId) return;
   const tasks = getTasks();
   const t = tasks.find(t => t.id === draggedTaskId);
-  if (t) { t.hour = hour; saveTasks(tasks); }
+  if (t) {
+    const duration = (t.endHour || t.hour + 0.5) - t.hour;
+    t.hour = hour;
+    t.endHour = hour + duration;
+    saveTasks(tasks);
+  }
   draggedTaskId = null;
   render();
 }
@@ -913,18 +942,41 @@ document.getElementById('recurringModal').addEventListener('click', e => { if (e
 // Enter key
 document.getElementById('taskNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveTask(); });
 
-// Populate time slot select
+// Populate start & end time selects
 const hourSelect = document.getElementById('taskHourSelect');
+const endSelect = document.getElementById('taskEndSelect');
 const nowH = new Date().getHours();
 const nowM = new Date().getMinutes();
-const defaultSlot = (nowH >= START_HOUR && nowH <= END_HOUR) ? nowH + (nowM >= 30 ? 0.5 : 0) : 9;
-for (let slot = START_HOUR; slot <= END_HOUR; slot += 0.5) {
-  const opt = document.createElement('option');
-  opt.value = slot;
-  opt.textContent = formatSlot(slot);
-  if (slot === defaultSlot) opt.selected = true;
-  hourSelect.appendChild(opt);
+const defaultStart = (nowH >= START_HOUR && nowH <= END_HOUR) ? nowH + (nowM >= 30 ? 0.5 : 0) : 9;
+const defaultEnd = defaultStart + 0.5;
+
+for (let slot = START_HOUR; slot <= END_HOUR + 0.5; slot += 0.5) {
+  // Start select: 6:00 AM to 10:00 PM
+  if (slot <= END_HOUR) {
+    const opt = document.createElement('option');
+    opt.value = slot;
+    opt.textContent = formatSlot(slot);
+    if (slot === defaultStart) opt.selected = true;
+    hourSelect.appendChild(opt);
+  }
+  // End select: 6:30 AM to 10:30 PM (always after earliest start)
+  if (slot >= START_HOUR + 0.5) {
+    const opt = document.createElement('option');
+    opt.value = slot;
+    opt.textContent = formatSlot(slot);
+    if (slot === defaultEnd) opt.selected = true;
+    endSelect.appendChild(opt);
+  }
 }
+
+// When start changes, bump end if it's not after start
+hourSelect.addEventListener('change', () => {
+  const startVal = parseFloat(hourSelect.value);
+  const endVal = parseFloat(endSelect.value);
+  if (endVal <= startVal) {
+    endSelect.value = String(Math.min(startVal + 0.5, END_HOUR + 0.5));
+  }
+});
 
 // ======== INIT ========
 render();
