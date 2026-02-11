@@ -326,28 +326,67 @@
   .task-action-btn:active { background: var(--border); transform: scale(0.9); }
   .task-action-btn.delete:active { background: var(--danger-soft); color: var(--danger); }
 
-  /* Continuation bar for multi-slot tasks */
-  .task-continuation {
-    height: 6px;
-    background: var(--primary-soft);
-    border-left: 3px solid var(--primary);
-    border-radius: 0 4px 4px 0;
-    margin: 2px 0;
-    opacity: 0.7;
+  /* Color-coded time block fills */
+  .time-content.blocked {
+    min-height: 40px;
+    border-radius: 0;
+    position: relative;
   }
-  .task-continuation.completed {
-    background: var(--success-soft);
-    border-left-color: var(--success);
-    opacity: 0.4;
+  .time-content.blocked.block-start {
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    padding-top: 0;
+  }
+  .time-content.blocked.block-end {
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+  .time-content.blocked.block-single {
+    border-radius: var(--radius-sm);
+  }
+  .time-content.blocked.block-start.block-end {
+    border-radius: var(--radius-sm);
   }
 
-  /* Spanning task: left accent bar */
-  .task-item.spanning {
-    border-left: 3px solid var(--primary);
+  /* Task color palette */
+  .time-content.color-indigo { background: #EEF2FF; border-left: 4px solid #6366F1; }
+  .time-content.color-blue { background: #EFF6FF; border-left: 4px solid #3B82F6; }
+  .time-content.color-emerald { background: #ECFDF5; border-left: 4px solid #10B981; }
+  .time-content.color-amber { background: #FFFBEB; border-left: 4px solid #F59E0B; }
+  .time-content.color-rose { background: #FFF1F2; border-left: 4px solid #F43F5E; }
+  .time-content.color-cyan { background: #ECFEFF; border-left: 4px solid #06B6D4; }
+  .time-content.color-violet { background: #F5F3FF; border-left: 4px solid #8B5CF6; }
+  .time-content.color-orange { background: #FFF7ED; border-left: 4px solid #F97316; }
+
+  .time-content.blocked.completed-block {
+    opacity: 0.45;
   }
-  .task-item.spanning.completed {
-    border-left-color: var(--success);
+
+  /* Task card inside colored block */
+  .task-item.in-block {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 0;
   }
+  .task-item.in-block .task-title {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .task-item.in-block .task-time {
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+  .task-item.in-block .task-checkbox {
+    background: rgba(255,255,255,0.7);
+  }
+  .task-item.in-block.completed .task-title {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+  }
+  .task-item.in-block .task-actions { opacity: 0.5; }
+  .task-item.in-block:hover .task-actions,
+  .task-item.in-block:active .task-actions { opacity: 1; }
+  .task-item.in-block .task-action-btn { color: var(--text-secondary); }
 
   /* Drop zone */
   .drop-zone {
@@ -711,27 +750,44 @@ function render() {
   const timeline = document.getElementById('timeline');
   let html = '';
 
+  // Assign a color to each task by index
+  const COLORS = ['indigo','blue','emerald','amber','rose','cyan','violet','orange'];
+  const taskColors = {};
+  tasks.forEach((t, i) => { taskColors[t.id] = COLORS[i % COLORS.length]; });
+
   for (let slot = START_HOUR; slot <= END_HOUR; slot += 0.5) {
     // Tasks that START at this slot
     const startingTasks = tasks.filter(t => t.hour === slot);
-    // Tasks that SPAN this slot (started earlier, haven't ended yet)
-    const continuingTasks = tasks.filter(t => {
+    // Tasks that COVER this slot (started at or before, end after)
+    const coveringTasks = tasks.filter(t => {
       const end = t.endHour != null ? t.endHour : t.hour + 0.5;
-      return t.hour < slot && end > slot;
+      return t.hour <= slot && end > slot;
     });
     const isCurrent = today && slot === currentSlot;
-    const hasContent = startingTasks.length > 0 || continuingTasks.length > 0;
+    const hasContent = coveringTasks.length > 0;
     const isOnHour = slot % 1 === 0;
+
+    // Determine block classes for the first covering task (primary block color)
+    let blockClasses = '';
+    if (coveringTasks.length > 0) {
+      const primary = coveringTasks[0];
+      const end = primary.endHour != null ? primary.endHour : primary.hour + 0.5;
+      const isStart = primary.hour === slot;
+      const isEnd = (slot + 0.5) >= end;
+      const color = taskColors[primary.id];
+      blockClasses = `blocked color-${color}`;
+      if (isStart && isEnd) blockClasses += ' block-single';
+      else if (isStart) blockClasses += ' block-start';
+      else if (isEnd) blockClasses += ' block-end';
+      if (primary.completed) blockClasses += ' completed-block';
+    }
 
     html += `<div class="time-block ${isCurrent ? 'current-slot' : ''} ${!hasContent ? 'empty' : ''} ${isOnHour ? 'on-hour' : 'half-hour'}" data-hour="${slot}">`;
     html += `<div class="time-gutter"><div class="time-label">${formatSlot(slot)}</div></div>`;
-    html += `<div class="time-content" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)">`;
+    html += `<div class="time-content ${blockClasses}" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)">`;
 
-    startingTasks.forEach(task => { html += renderTask(task); });
-
-    continuingTasks.forEach(task => {
-      html += `<div class="task-continuation ${task.completed ? 'completed' : ''}" title="${escHtml(task.title)}"></div>`;
-    });
+    // Only render task card at its start slot
+    startingTasks.forEach(task => { html += renderTask(task, true); });
 
     if (!hasContent) {
       html += `<div class="drop-zone" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)"></div>`;
@@ -748,7 +804,7 @@ function render() {
   }
 }
 
-function renderTask(task) {
+function renderTask(task, inBlock) {
   const tagHtml = task.type === 'office'
     ? '<span class="task-tag office">Office</span>'
     : task.type === 'remote'
@@ -757,10 +813,9 @@ function renderTask(task) {
 
   const endHour = task.endHour != null ? task.endHour : task.hour + 0.5;
   const timeStr = formatSlot(task.hour) + ' – ' + formatSlot(endHour);
-  const isSpanning = (endHour - task.hour) > 0.5;
 
   return `
-    <div class="task-item ${task.completed ? 'completed' : ''} ${isSpanning ? 'spanning' : ''}"
+    <div class="task-item ${task.completed ? 'completed' : ''} ${inBlock ? 'in-block' : ''}"
          draggable="true" data-id="${task.id}"
          ondragstart="onDragStart(event, '${task.id}')"
          ondragend="onDragEnd(event)">
