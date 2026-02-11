@@ -253,7 +253,14 @@
   .task-item.completed .task-checkbox {
     background: var(--success);
     border-color: var(--success);
-    transform: scale(1);
+    animation: checkPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes checkPop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.4); }
+    60% { transform: scale(0.9); }
+    100% { transform: scale(1); }
   }
 
   .task-checkbox svg {
@@ -277,7 +284,9 @@
 
   .task-item.completed .task-title {
     text-decoration: line-through;
-    color: var(--text-tertiary);
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--success);
+    color: var(--text-secondary);
   }
 
   .task-time {
@@ -286,7 +295,25 @@
     margin-top: 2px;
     letter-spacing: 0.1px;
   }
-  .task-item.completed .task-time { color: var(--text-tertiary); opacity: 0.6; }
+  .task-item.completed .task-time { color: var(--success); opacity: 0.8; font-weight: 600; }
+
+  /* Done badge */
+  .done-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--success);
+    background: var(--success-soft);
+    padding: 3px 8px;
+    border-radius: 6px;
+    animation: badgePop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes badgePop {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
 
   .task-meta {
     display: flex; align-items: center; gap: 6px;
@@ -357,7 +384,8 @@
   .time-content.color-orange { background: #FFF7ED; border-left: 4px solid #F97316; }
 
   .time-content.blocked.completed-block {
-    opacity: 0.45;
+    background: #ECFDF5 !important;
+    border-left-color: #10B981 !important;
   }
 
   /* Task card inside colored block */
@@ -872,8 +900,11 @@ function renderTask(task, inBlock) {
       </div>
       <div class="task-body">
         <div class="task-title">${escHtml(task.title)}</div>
-        <div class="task-time">${timeStr}</div>
-        ${tagHtml ? '<div class="task-meta">' + tagHtml + '</div>' : ''}
+        <div class="task-time">${task.completed ? '&#10003; ' : ''}${timeStr}</div>
+        <div class="task-meta">
+          ${task.completed ? '<span class="done-badge">Done</span>' : ''}
+          ${tagHtml}
+        </div>
       </div>
       <div class="task-actions">
         <button class="task-action-btn" onclick="editTask('${task.id}')" aria-label="Edit">
@@ -912,8 +943,44 @@ function setPickerColor(color) {
 function toggleTask(id) {
   const tasks = getTasks();
   const t = tasks.find(t => t.id === id);
-  if (t) { t.completed = !t.completed; saveTasks(tasks); }
+  if (!t) return;
+  const wasCompleted = t.completed;
+  t.completed = !t.completed;
+  saveTasks(tasks);
   render();
+  // Celebrate completion
+  if (!wasCompleted && t.completed) {
+    const el = document.querySelector(`[data-id="${id}"] .task-checkbox`);
+    if (el) spawnConfetti(el);
+  }
+}
+
+function spawnConfetti(anchor) {
+  const rect = anchor.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const colors = ['#10B981','#6366F1','#F59E0B','#F43F5E','#3B82F6','#8B5CF6'];
+  for (let i = 0; i < 12; i++) {
+    const dot = document.createElement('div');
+    const angle = (Math.PI * 2 * i) / 12;
+    const dist = 30 + Math.random() * 40;
+    const size = 5 + Math.random() * 4;
+    Object.assign(dot.style, {
+      position: 'fixed', left: cx + 'px', top: cy + 'px',
+      width: size + 'px', height: size + 'px',
+      borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+      background: colors[Math.floor(Math.random() * colors.length)],
+      pointerEvents: 'none', zIndex: '9999',
+      transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+      opacity: '1',
+    });
+    document.body.appendChild(dot);
+    requestAnimationFrame(() => {
+      dot.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist - 20}px) scale(0)`;
+      dot.style.opacity = '0';
+    });
+    setTimeout(() => dot.remove(), 700);
+  }
 }
 
 function deleteTask(id) {
