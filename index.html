@@ -547,6 +547,44 @@
     font-size: 14px;
     line-height: 1.5;
   }
+
+  /* ===== COLOR PICKER ===== */
+  .color-picker {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 4px 0;
+  }
+  .color-swatch {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  .color-swatch:active { transform: scale(0.9); }
+  .color-swatch.selected {
+    border-color: var(--text);
+    box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--text);
+  }
+  .color-swatch.selected::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 10px; height: 10px;
+    background: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .color-swatch[data-color="indigo"] { background: #6366F1; }
+  .color-swatch[data-color="blue"] { background: #3B82F6; }
+  .color-swatch[data-color="emerald"] { background: #10B981; }
+  .color-swatch[data-color="amber"] { background: #F59E0B; }
+  .color-swatch[data-color="rose"] { background: #F43F5E; }
+  .color-swatch[data-color="cyan"] { background: #06B6D4; }
+  .color-swatch[data-color="violet"] { background: #8B5CF6; }
+  .color-swatch[data-color="orange"] { background: #F97316; }
 </style>
 </head>
 <body>
@@ -604,6 +642,19 @@
         <option value="office">Office Only</option>
         <option value="remote">Remote Only</option>
       </select>
+    </div>
+    <div class="form-group">
+      <label>Color</label>
+      <div class="color-picker" id="colorPicker">
+        <div class="color-swatch selected" data-color="indigo" onclick="pickColor(this)"></div>
+        <div class="color-swatch" data-color="blue" onclick="pickColor(this)"></div>
+        <div class="color-swatch" data-color="emerald" onclick="pickColor(this)"></div>
+        <div class="color-swatch" data-color="amber" onclick="pickColor(this)"></div>
+        <div class="color-swatch" data-color="rose" onclick="pickColor(this)"></div>
+        <div class="color-swatch" data-color="cyan" onclick="pickColor(this)"></div>
+        <div class="color-swatch" data-color="violet" onclick="pickColor(this)"></div>
+        <div class="color-swatch" data-color="orange" onclick="pickColor(this)"></div>
+      </div>
     </div>
     <div class="form-group">
       <label>Repeat</label>
@@ -712,7 +763,7 @@ function getTasksForDate(date) {
     if (r.type === 'remote' && dayType !== 'remote') shouldShow = false;
 
     if (shouldShow) {
-      const task = { id: uid(), title: r.title, hour: r.hour, endHour: r.endHour || r.hour + 0.5, date: key, completed: false, recurringId: r.id, type: r.type };
+      const task = { id: uid(), title: r.title, hour: r.hour, endHour: r.endHour || r.hour + 0.5, date: key, completed: false, recurringId: r.id, type: r.type, color: r.color || 'indigo' };
       allTasks.push(task);
       const tasks = getTasks();
       tasks.push(task);
@@ -750,11 +801,6 @@ function render() {
   const timeline = document.getElementById('timeline');
   let html = '';
 
-  // Assign a color to each task by index
-  const COLORS = ['indigo','blue','emerald','amber','rose','cyan','violet','orange'];
-  const taskColors = {};
-  tasks.forEach((t, i) => { taskColors[t.id] = COLORS[i % COLORS.length]; });
-
   for (let slot = START_HOUR; slot <= END_HOUR; slot += 0.5) {
     // Tasks that START at this slot
     const startingTasks = tasks.filter(t => t.hour === slot);
@@ -774,7 +820,7 @@ function render() {
       const end = primary.endHour != null ? primary.endHour : primary.hour + 0.5;
       const isStart = primary.hour === slot;
       const isEnd = (slot + 0.5) >= end;
-      const color = taskColors[primary.id];
+      const color = primary.color || 'indigo';
       blockClasses = `blocked color-${color}`;
       if (isStart && isEnd) blockClasses += ' block-single';
       else if (isStart) blockClasses += ' block-start';
@@ -846,6 +892,22 @@ function escHtml(s) {
   return d.innerHTML;
 }
 
+// ======== COLOR PICKER ========
+let selectedColor = 'indigo';
+
+function pickColor(el) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedColor = el.dataset.color;
+}
+
+function setPickerColor(color) {
+  selectedColor = color || 'indigo';
+  document.querySelectorAll('.color-swatch').forEach(s => {
+    s.classList.toggle('selected', s.dataset.color === selectedColor);
+  });
+}
+
 // ======== TASK ACTIONS ========
 function toggleTask(id) {
   const tasks = getTasks();
@@ -870,6 +932,7 @@ function editTask(id) {
   const endVal = task.endHour != null ? task.endHour : task.hour + 0.5;
   document.getElementById('taskEndSelect').value = String(endVal);
   document.getElementById('taskTypeSelect').value = task.type || 'any';
+  setPickerColor(task.color);
   document.getElementById('taskRecurrence').value = 'none';
   document.getElementById('taskRecurrence').parentElement.style.display = 'none';
   openModal();
@@ -892,6 +955,7 @@ function closeModal() {
   const s = (nowH >= START_HOUR && nowH <= END_HOUR) ? nowH + (nowM >= 30 ? 0.5 : 0) : 9;
   document.getElementById('taskHourSelect').value = String(s);
   document.getElementById('taskEndSelect').value = String(s + 0.5);
+  setPickerColor('indigo');
 }
 
 function saveTask() {
@@ -903,17 +967,19 @@ function saveTask() {
   const type = document.getElementById('taskTypeSelect').value;
   const recurrence = document.getElementById('taskRecurrence').value;
 
+  const color = selectedColor;
+
   if (editingTaskId) {
     const tasks = getTasks();
     const t = tasks.find(t => t.id === editingTaskId);
-    if (t) { t.title = name; t.hour = hour; t.endHour = endHour; t.type = type; saveTasks(tasks); }
+    if (t) { t.title = name; t.hour = hour; t.endHour = endHour; t.type = type; t.color = color; saveTasks(tasks); }
   } else if (recurrence !== 'none') {
     const recs = getRecurring();
-    recs.push({ id: uid(), title: name, hour, endHour, type, recurrence });
+    recs.push({ id: uid(), title: name, hour, endHour, type, color, recurrence });
     saveRecurring(recs);
   } else {
     const tasks = getTasks();
-    tasks.push({ id: uid(), title: name, hour, endHour, date: dateKey(currentDate), completed: false, type });
+    tasks.push({ id: uid(), title: name, hour, endHour, date: dateKey(currentDate), completed: false, type, color });
     saveTasks(tasks);
   }
   closeModal();
