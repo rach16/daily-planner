@@ -326,6 +326,29 @@
   .task-action-btn:active { background: var(--border); transform: scale(0.9); }
   .task-action-btn.delete:active { background: var(--danger-soft); color: var(--danger); }
 
+  /* Continuation bar for multi-slot tasks */
+  .task-continuation {
+    height: 6px;
+    background: var(--primary-soft);
+    border-left: 3px solid var(--primary);
+    border-radius: 0 4px 4px 0;
+    margin: 2px 0;
+    opacity: 0.7;
+  }
+  .task-continuation.completed {
+    background: var(--success-soft);
+    border-left-color: var(--success);
+    opacity: 0.4;
+  }
+
+  /* Spanning task: left accent bar */
+  .task-item.spanning {
+    border-left: 3px solid var(--primary);
+  }
+  .task-item.spanning.completed {
+    border-left-color: var(--success);
+  }
+
   /* Drop zone */
   .drop-zone {
     min-height: 4px; border-radius: var(--radius-xs);
@@ -689,18 +712,28 @@ function render() {
   let html = '';
 
   for (let slot = START_HOUR; slot <= END_HOUR; slot += 0.5) {
-    const slotTasks = tasks.filter(t => t.hour === slot);
+    // Tasks that START at this slot
+    const startingTasks = tasks.filter(t => t.hour === slot);
+    // Tasks that SPAN this slot (started earlier, haven't ended yet)
+    const continuingTasks = tasks.filter(t => {
+      const end = t.endHour != null ? t.endHour : t.hour + 0.5;
+      return t.hour < slot && end > slot;
+    });
     const isCurrent = today && slot === currentSlot;
-    const isEmpty = slotTasks.length === 0;
+    const hasContent = startingTasks.length > 0 || continuingTasks.length > 0;
     const isOnHour = slot % 1 === 0;
 
-    html += `<div class="time-block ${isCurrent ? 'current-slot' : ''} ${isEmpty ? 'empty' : ''} ${isOnHour ? 'on-hour' : 'half-hour'}" data-hour="${slot}">`;
+    html += `<div class="time-block ${isCurrent ? 'current-slot' : ''} ${!hasContent ? 'empty' : ''} ${isOnHour ? 'on-hour' : 'half-hour'}" data-hour="${slot}">`;
     html += `<div class="time-gutter"><div class="time-label">${formatSlot(slot)}</div></div>`;
     html += `<div class="time-content" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)">`;
 
-    slotTasks.forEach(task => { html += renderTask(task); });
+    startingTasks.forEach(task => { html += renderTask(task); });
 
-    if (isEmpty) {
+    continuingTasks.forEach(task => {
+      html += `<div class="task-continuation ${task.completed ? 'completed' : ''}" title="${escHtml(task.title)}"></div>`;
+    });
+
+    if (!hasContent) {
       html += `<div class="drop-zone" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)"></div>`;
     }
 
@@ -724,9 +757,10 @@ function renderTask(task) {
 
   const endHour = task.endHour != null ? task.endHour : task.hour + 0.5;
   const timeStr = formatSlot(task.hour) + ' – ' + formatSlot(endHour);
+  const isSpanning = (endHour - task.hour) > 0.5;
 
   return `
-    <div class="task-item ${task.completed ? 'completed' : ''}"
+    <div class="task-item ${task.completed ? 'completed' : ''} ${isSpanning ? 'spanning' : ''}"
          draggable="true" data-id="${task.id}"
          ondragstart="onDragStart(event, '${task.id}')"
          ondragend="onDragEnd(event)">
