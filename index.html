@@ -2,330 +2,480 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#4A90D9">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Daily Planner</title>
 <style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   :root {
-    --primary: #4A90D9;
-    --primary-light: #E8F0FE;
-    --primary-dark: #2E6BB5;
-    --bg: #F8F9FA;
+    --primary: #6366F1;
+    --primary-soft: #EEF2FF;
+    --primary-hover: #4F46E5;
+    --bg: #F9FAFB;
     --card: #FFFFFF;
-    --text: #1A1A2E;
-    --text-muted: #8E8E93;
-    --text-light: #AEAEB2;
-    --border: #E5E5EA;
-    --success: #34C759;
-    --danger: #FF3B30;
-    --office: #FF9500;
-    --office-light: #FFF3E0;
-    --remote: #5AC8FA;
-    --remote-light: #E3F7FD;
-    --current-hour: #FFFDE7;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08);
-    --shadow-lg: 0 4px 12px rgba(0,0,0,0.12);
-    --radius: 12px;
-    --radius-sm: 8px;
+    --text: #111827;
+    --text-secondary: #6B7280;
+    --text-tertiary: #9CA3AF;
+    --border: #F3F4F6;
+    --border-strong: #E5E7EB;
+    --success: #10B981;
+    --success-soft: #ECFDF5;
+    --danger: #EF4444;
+    --danger-soft: #FEF2F2;
+    --office: #F59E0B;
+    --office-soft: #FFFBEB;
+    --office-text: #92400E;
+    --remote: #06B6D4;
+    --remote-soft: #ECFEFF;
+    --remote-text: #155E75;
+    --weekend-soft: #F5F3FF;
+    --weekend-text: #6D28D9;
+    --current-bg: rgba(99, 102, 241, 0.04);
+    --current-border: rgba(99, 102, 241, 0.2);
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+    --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.05);
+    --shadow-fab: 0 8px 24px rgba(99,102,241,0.35);
+    --radius: 16px;
+    --radius-md: 12px;
+    --radius-sm: 10px;
+    --radius-xs: 8px;
   }
+
   html { font-size: 16px; }
+
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100dvh;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
-    padding-bottom: 100px;
+    padding-bottom: 120px;
+    line-height: 1.5;
   }
 
-  /* Header */
+  /* ===== HEADER ===== */
   .header {
     position: sticky; top: 0; z-index: 100;
-    background: var(--card);
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
     border-bottom: 1px solid var(--border);
-    padding: 12px 16px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    padding: 16px 20px 14px;
   }
+
   .header-top {
     display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
   }
+
   .nav-btn {
-    width: 44px; height: 44px;
+    width: 40px; height: 40px;
     display: flex; align-items: center; justify-content: center;
-    border: none; background: var(--bg);
+    border: none; background: none;
     border-radius: 50%; cursor: pointer;
-    font-size: 18px; color: var(--primary);
-    transition: background 0.2s;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
     -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
   }
-  .nav-btn:active { background: var(--primary-light); }
-  .header-date {
-    text-align: center; flex: 1;
+  .nav-btn svg { width: 20px; height: 20px; }
+  .nav-btn:active { background: var(--border); transform: scale(0.92); }
+
+  .header-center {
+    text-align: center; flex: 1; min-width: 0;
   }
-  .header-date h1 {
-    font-size: 18px; font-weight: 700;
-    letter-spacing: -0.3px;
+
+  .date-display {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
   }
-  .header-date .subtitle {
-    font-size: 13px; color: var(--text-muted);
+
+  .date-weekday {
+    font-size: 13px; font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .date-main {
+    font-size: 20px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.4px;
+  }
+
+  .header-meta {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     margin-top: 2px;
   }
+
+  .day-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
+    letter-spacing: 0.1px;
+  }
+  .day-badge.office { background: var(--office-soft); color: var(--office-text); }
+  .day-badge.remote { background: var(--remote-soft); color: var(--remote-text); }
+  .day-badge.weekend { background: var(--weekend-soft); color: var(--weekend-text); }
+
   .today-btn {
     font-size: 12px; font-weight: 600;
-    color: var(--primary); background: var(--primary-light);
-    border: none; border-radius: 16px;
+    color: var(--primary); background: var(--primary-soft);
+    border: none; border-radius: 20px;
     padding: 4px 12px; cursor: pointer;
-    margin-top: 4px;
     display: none;
+    transition: all 0.15s ease;
   }
-  .today-btn.visible { display: inline-block; }
+  .today-btn.visible { display: inline-flex; }
   .today-btn:active { background: var(--primary); color: white; }
 
-  /* Day type badge */
-  .day-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 12px; font-weight: 600;
-    padding: 3px 10px; border-radius: 12px;
-    margin-top: 4px;
-  }
-  .day-badge.office { background: var(--office-light); color: #E65100; }
-  .day-badge.remote { background: var(--remote-light); color: #0277BD; }
-
-  /* Time blocks */
+  /* ===== TIMELINE ===== */
   .timeline {
-    padding: 8px 12px;
-  }
-  .time-block {
-    display: flex; gap: 10px;
-    padding: 4px 0;
-    min-height: 44px;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.3s;
-  }
-  .time-block.current-hour {
-    background: var(--current-hour);
-    border-radius: var(--radius-sm);
-    margin: 0 -8px;
-    padding: 4px 8px;
-  }
-  .time-block.empty { min-height: 28px; opacity: 0.5; }
-  .time-block.empty .time-label { font-size: 12px; }
-  .time-block.half-hour { border-bottom: 1px dashed var(--border); }
-  .time-block.half-hour .time-label { font-size: 12px; color: var(--text-light); }
-  .time-label {
-    width: 52px; flex-shrink: 0;
-    font-size: 13px; font-weight: 600;
-    color: var(--text-muted);
-    padding-top: 8px;
-    text-align: right;
-    padding-right: 8px;
-  }
-  .time-block.current-hour .time-label { color: var(--primary); }
-  .block-tasks {
-    flex: 1; display: flex; flex-direction: column; gap: 4px;
-    padding: 4px 0;
-    min-height: 36px;
+    padding: 4px 16px 0;
   }
 
-  /* Tasks */
+  .hour-group {
+    position: relative;
+  }
+
+  .time-block {
+    display: flex; gap: 12px;
+    padding: 0;
+    min-height: 44px;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+
+  .time-block.empty {
+    min-height: 24px;
+  }
+
+  .time-block.current-slot {
+    z-index: 2;
+  }
+
+  .time-gutter {
+    width: 54px; flex-shrink: 0;
+    padding-top: 10px;
+    position: relative;
+  }
+
+  .time-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    text-align: right;
+    padding-right: 12px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .time-block.on-hour .time-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .time-block.current-slot .time-label {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .time-content {
+    flex: 1;
+    padding: 4px 0;
+    min-height: inherit;
+    display: flex; flex-direction: column; gap: 6px;
+    border-top: 1px solid var(--border);
+    position: relative;
+  }
+
+  .time-block.on-hour .time-content {
+    border-top-color: var(--border-strong);
+  }
+
+  .time-block.current-slot .time-content {
+    border-top-color: var(--primary);
+    border-top-width: 2px;
+  }
+
+  .time-block.current-slot .time-content::before {
+    content: '';
+    position: absolute;
+    left: -6px; top: -5px;
+    width: 8px; height: 8px;
+    background: var(--primary);
+    border-radius: 50%;
+  }
+
+  /* ===== TASK CARDS ===== */
   .task-item {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 12px;
     background: var(--card);
     border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    box-shadow: var(--shadow);
-    transition: all 0.3s ease;
-    animation: slideIn 0.25s ease;
+    padding: 12px 14px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+    animation: taskEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: grab;
   }
-  .task-item.dragging { opacity: 0.5; transform: scale(0.96); }
-  .task-item.drag-over { border: 2px dashed var(--primary); }
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
+  .task-item:active { cursor: grabbing; }
+  .task-item.dragging { opacity: 0.4; transform: scale(0.97); }
+
+  @keyframes taskEnter {
+    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
+
   .task-checkbox {
-    width: 24px; height: 24px; flex-shrink: 0;
-    border: 2px solid var(--border);
-    border-radius: 50%; cursor: pointer;
+    width: 22px; height: 22px; flex-shrink: 0;
+    border: 2px solid var(--border-strong);
+    border-radius: 7px;
+    cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    transition: all 0.25s;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     -webkit-tap-highlight-color: transparent;
+    background: var(--card);
   }
-  .task-checkbox:active { transform: scale(0.9); }
+  .task-checkbox:active { transform: scale(0.85); }
+
   .task-item.completed .task-checkbox {
-    background: var(--success); border-color: var(--success);
+    background: var(--success);
+    border-color: var(--success);
+    transform: scale(1);
   }
-  .task-checkbox svg { width: 14px; height: 14px; opacity: 0; transition: opacity 0.2s; }
-  .task-item.completed .task-checkbox svg { opacity: 1; }
+
+  .task-checkbox svg {
+    width: 12px; height: 12px;
+    opacity: 0; transform: scale(0);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .task-item.completed .task-checkbox svg {
+    opacity: 1; transform: scale(1);
+  }
+
+  .task-body { flex: 1; min-width: 0; }
+
   .task-title {
-    flex: 1; font-size: 15px; line-height: 1.3;
-    transition: all 0.3s;
+    font-size: 14px; font-weight: 500;
+    line-height: 1.35;
+    color: var(--text);
+    transition: all 0.25s ease;
+    word-break: break-word;
   }
+
   .task-item.completed .task-title {
     text-decoration: line-through;
-    color: var(--text-light);
+    color: var(--text-tertiary);
   }
+
+  .task-meta {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 3px;
+  }
+
   .task-tag {
-    font-size: 11px; font-weight: 600;
-    padding: 2px 8px; border-radius: 10px;
-    white-space: nowrap;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1.4;
   }
-  .task-tag.office { background: var(--office-light); color: #E65100; }
-  .task-tag.remote { background: var(--remote-light); color: #0277BD; }
+  .task-tag.office { background: var(--office-soft); color: var(--office-text); }
+  .task-tag.remote { background: var(--remote-soft); color: var(--remote-text); }
+
   .task-actions {
-    display: flex; gap: 4px;
+    display: flex; gap: 2px;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
   }
+  .task-item:hover .task-actions,
+  .task-item:active .task-actions { opacity: 1; }
+
   .task-action-btn {
-    width: 32px; height: 32px;
+    width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
     border: none; background: transparent;
-    border-radius: 50%; cursor: pointer;
-    font-size: 14px; color: var(--text-muted);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+    color: var(--text-tertiary);
+    transition: all 0.15s ease;
     -webkit-tap-highlight-color: transparent;
   }
-  .task-action-btn:active { background: var(--bg); }
-  .task-action-btn.delete:active { background: #FFE5E5; color: var(--danger); }
+  .task-action-btn svg { width: 15px; height: 15px; }
+  .task-action-btn:active { background: var(--border); transform: scale(0.9); }
+  .task-action-btn.delete:active { background: var(--danger-soft); color: var(--danger); }
 
-  /* Empty block drop zone */
+  /* Drop zone */
   .drop-zone {
-    min-height: 8px; border-radius: 6px;
-    transition: all 0.2s;
+    min-height: 4px; border-radius: var(--radius-xs);
+    transition: all 0.2s ease;
   }
   .drop-zone.drag-over {
-    min-height: 44px; background: var(--primary-light);
+    min-height: 48px;
+    background: var(--primary-soft);
     border: 2px dashed var(--primary);
+    border-radius: var(--radius-sm);
   }
 
-  /* FAB */
+  /* ===== FAB ===== */
   .fab {
     position: fixed;
-    bottom: 32px; right: 20px;
+    bottom: 28px; right: 20px;
     width: 56px; height: 56px;
-    border-radius: 50%;
+    border-radius: 18px;
     background: var(--primary);
     color: white; border: none;
-    font-size: 28px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-fab);
     cursor: pointer;
     z-index: 200;
     display: flex; align-items: center; justify-content: center;
-    transition: transform 0.2s, background 0.2s;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     -webkit-tap-highlight-color: transparent;
   }
-  .fab:active { transform: scale(0.92); background: var(--primary-dark); }
+  .fab svg { width: 24px; height: 24px; }
+  .fab:active { transform: scale(0.9); background: var(--primary-hover); }
 
-  /* Modal */
+  /* ===== MODAL ===== */
   .modal-overlay {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.25);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 300;
     display: flex; align-items: flex-end; justify-content: center;
     opacity: 0; pointer-events: none;
-    transition: opacity 0.25s;
+    transition: opacity 0.2s ease;
   }
   .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
   .modal {
     background: var(--card);
-    border-radius: 20px 20px 0 0;
-    width: 100%; max-width: 500px;
-    padding: 20px;
+    border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 480px;
+    padding: 12px 24px 28px;
     transform: translateY(100%);
-    transition: transform 0.3s ease;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 85dvh;
     overflow-y: auto;
   }
   .modal-overlay.open .modal { transform: translateY(0); }
+
   .modal-handle {
     width: 36px; height: 4px;
-    background: var(--border);
+    background: var(--border-strong);
     border-radius: 2px;
-    margin: 0 auto 16px;
+    margin: 4px auto 20px;
   }
+
   .modal h2 {
     font-size: 18px; font-weight: 700;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+    color: var(--text);
   }
-  .form-group { margin-bottom: 14px; }
+
+  .form-group { margin-bottom: 16px; }
+
   .form-group label {
     display: block; font-size: 13px;
-    font-weight: 600; color: var(--text-muted);
+    font-weight: 600; color: var(--text-secondary);
     margin-bottom: 6px;
+    letter-spacing: 0.1px;
   }
+
   .form-group input, .form-group select {
-    width: 100%; padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 16px;
-    background: var(--bg);
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    font-size: 15px;
+    font-family: inherit;
+    background: var(--card);
     color: var(--text);
+    transition: all 0.15s ease;
     -webkit-appearance: none;
   }
+  .form-group input::placeholder { color: var(--text-tertiary); }
   .form-group input:focus, .form-group select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
   }
-  .form-row { display: flex; gap: 10px; }
+
+  .form-row { display: flex; gap: 12px; }
   .form-row .form-group { flex: 1; }
+
   .modal-actions {
-    display: flex; gap: 10px; margin-top: 20px;
+    display: flex; gap: 10px; margin-top: 24px;
   }
+
   .btn {
     flex: 1; padding: 14px;
-    border: none; border-radius: var(--radius-sm);
-    font-size: 16px; font-weight: 600;
+    border: none; border-radius: var(--radius-xs);
+    font-size: 15px; font-weight: 600;
+    font-family: inherit;
     cursor: pointer; text-align: center;
     -webkit-tap-highlight-color: transparent;
-    transition: background 0.2s;
+    transition: all 0.15s ease;
   }
-  .btn-primary { background: var(--primary); color: white; }
-  .btn-primary:active { background: var(--primary-dark); }
-  .btn-secondary { background: var(--bg); color: var(--text); }
-  .btn-secondary:active { background: var(--border); }
-
-  /* Recurring tasks settings */
-  .settings-btn {
-    width: 44px; height: 44px;
-    display: flex; align-items: center; justify-content: center;
-    border: none; background: transparent;
-    border-radius: 50%; cursor: pointer;
-    font-size: 20px;
-    -webkit-tap-highlight-color: transparent;
+  .btn-primary {
+    background: var(--primary); color: white;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
   }
-  .settings-btn:active { background: var(--bg); }
+  .btn-primary:active { background: var(--primary-hover); transform: scale(0.98); }
+  .btn-secondary { background: var(--border); color: var(--text-secondary); }
+  .btn-secondary:active { background: var(--border-strong); }
 
+  /* ===== RECURRING TASKS ===== */
   .recurring-list { list-style: none; }
   .recurring-item {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 12px;
+    padding: 14px 16px;
     background: var(--bg);
     border-radius: var(--radius-sm);
     margin-bottom: 8px;
+    border: 1px solid var(--border);
   }
   .recurring-item .info { flex: 1; }
-  .recurring-item .info .name { font-size: 15px; font-weight: 600; }
-  .recurring-item .info .meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .recurring-item .info .name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .recurring-item .info .meta { font-size: 12px; color: var(--text-tertiary); margin-top: 3px; }
 
-  /* Swipe hint */
-  .swipe-area {
-    touch-action: pan-y;
-  }
-
-  /* Scrollbar */
+  /* ===== SCROLLBAR ===== */
   ::-webkit-scrollbar { width: 0; }
 
-  /* Safe area for notch phones */
+  /* ===== SAFE AREA ===== */
   @supports (padding-top: env(safe-area-inset-top)) {
-    .header { padding-top: calc(12px + env(safe-area-inset-top)); }
-    body { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
-    .fab { bottom: calc(32px + env(safe-area-inset-bottom)); }
+    .header { padding-top: calc(16px + env(safe-area-inset-top)); }
+    body { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+    .fab { bottom: calc(28px + env(safe-area-inset-bottom)); }
+    .modal { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+  }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-tertiary);
+  }
+  .empty-state-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.6;
+  }
+  .empty-state p {
+    font-size: 14px;
+    line-height: 1.5;
   }
 </style>
 </head>
@@ -333,37 +483,47 @@
 
 <header class="header">
   <div class="header-top">
-    <button class="nav-btn" id="prevDay" aria-label="Previous day">&#8249;</button>
-    <div class="header-date">
-      <h1 id="dateTitle"></h1>
-      <div class="subtitle" id="dateSubtitle"></div>
-      <div id="dayBadge"></div>
-      <button class="today-btn" id="todayBtn" onclick="goToday()">Today</button>
+    <button class="nav-btn" id="prevDay" aria-label="Previous day">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <div class="header-center">
+      <div class="date-display">
+        <span class="date-weekday" id="dateWeekday"></span>
+        <span class="date-main" id="dateMain"></span>
+      </div>
+      <div class="header-meta">
+        <span id="dayBadge"></span>
+        <button class="today-btn" id="todayBtn" onclick="goToday()">Today</button>
+      </div>
     </div>
-    <button class="nav-btn" id="nextDay" aria-label="Next day">&#8250;</button>
+    <button class="nav-btn" id="nextDay" aria-label="Next day">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
   </div>
 </header>
 
 <main class="timeline swipe-area" id="timeline"></main>
 
-<button class="fab" id="fabAdd" aria-label="Add task">+</button>
+<button class="fab" id="fabAdd" aria-label="Add task">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+</button>
 
 <!-- Add/Edit Task Modal -->
 <div class="modal-overlay" id="taskModal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <h2 id="modalTitle">Add Task</h2>
+    <h2 id="modalTitle">New Task</h2>
     <div class="form-group">
-      <label>Task Name</label>
-      <input type="text" id="taskNameInput" placeholder="e.g. Team standup" autocomplete="off">
+      <label>What needs to be done?</label>
+      <input type="text" id="taskNameInput" placeholder="e.g. Team standup, Review PRs..." autocomplete="off">
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Time Block</label>
+        <label>Time</label>
         <select id="taskHourSelect"></select>
       </div>
       <div class="form-group">
-        <label>Type</label>
+        <label>Day Type</label>
         <select id="taskTypeSelect">
           <option value="any">Any Day</option>
           <option value="office">Office Only</option>
@@ -372,13 +532,13 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Recurrence</label>
+      <label>Repeat</label>
       <select id="taskRecurrence">
-        <option value="none">One-time (this day only)</option>
+        <option value="none">Just this day</option>
         <option value="daily">Every day</option>
-        <option value="weekdays">Every weekday</option>
-        <option value="office">Every office day</option>
-        <option value="remote">Every remote day</option>
+        <option value="weekdays">Weekdays</option>
+        <option value="office">Office days</option>
+        <option value="remote">Remote days</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -425,13 +585,7 @@ function saveRecurring(recs) { saveData('planner_recurring', recs); }
 // ======== OFFICE CADENCE ========
 function isOfficeDay(date) {
   const day = date.getDay();
-  if (day !== 2 && day !== 3) return false; // Only Tue & Wed
-  // Calculate weeks since start
-  const diffMs = date.getTime() - OFFICE_START.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
-  const weekNum = Math.floor(diffDays / 7);
-  // OFFICE_START is week 0 (office week). Even weeks = office, odd = remote.
-  // Adjust: OFFICE_START is a Tuesday in week 0
+  if (day !== 2 && day !== 3) return false;
   const startWeekMonday = new Date(OFFICE_START);
   startWeekMonday.setDate(startWeekMonday.getDate() - startWeekMonday.getDay() + 1);
   const dateWeekMonday = new Date(date);
@@ -451,12 +605,6 @@ function getDayType(date) {
 function dateKey(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-function formatDate(d) {
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-}
-function formatYear(d) {
-  return d.getFullYear();
-}
 function isToday(d) {
   const t = new Date(); t.setHours(0,0,0,0);
   return d.getTime() === t.getTime();
@@ -464,14 +612,11 @@ function isToday(d) {
 function formatSlot(slot) {
   const h = Math.floor(slot);
   const m = slot % 1 === 0.5 ? '30' : '00';
-  let hour = h % 12 || 12;
+  const hour = h % 12 || 12;
   const ampm = h < 12 ? 'AM' : 'PM';
   return hour + ':' + m + ' ' + ampm;
 }
-// Keep for recurring modal display compat
 function formatHour(h) { return formatSlot(h); }
-
-// ======== GENERATE ID ========
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 // ======== GET TASKS FOR DATE ========
@@ -479,43 +624,27 @@ function getTasksForDate(date) {
   const key = dateKey(date);
   const dayType = getDayType(date);
   const allTasks = getTasks().filter(t => t.date === key);
-
-  // Add recurring tasks
   const recurring = getRecurring();
   const dow = date.getDay();
 
   recurring.forEach(r => {
-    // Check if already instantiated for this date
     if (allTasks.some(t => t.recurringId === r.id)) return;
-
     let shouldShow = false;
     if (r.recurrence === 'daily') shouldShow = true;
     else if (r.recurrence === 'weekdays' && dow >= 1 && dow <= 5) shouldShow = true;
     else if (r.recurrence === 'office' && dayType === 'office') shouldShow = true;
     else if (r.recurrence === 'remote' && dayType === 'remote') shouldShow = true;
-
-    // Also check type constraint
     if (r.type === 'office' && dayType !== 'office') shouldShow = false;
     if (r.type === 'remote' && dayType !== 'remote') shouldShow = false;
 
     if (shouldShow) {
-      const task = {
-        id: uid(),
-        title: r.title,
-        hour: r.hour,
-        date: key,
-        completed: false,
-        recurringId: r.id,
-        type: r.type
-      };
+      const task = { id: uid(), title: r.title, hour: r.hour, date: key, completed: false, recurringId: r.id, type: r.type };
       allTasks.push(task);
-      // Persist
       const tasks = getTasks();
       tasks.push(task);
       saveTasks(tasks);
     }
   });
-
   return allTasks;
 }
 
@@ -523,31 +652,27 @@ function getTasksForDate(date) {
 function render() {
   const dayType = getDayType(currentDate);
   const today = isToday(currentDate);
-  const nowHour = new Date().getHours();
+  const now = new Date();
+  const nowHour = now.getHours();
+  const nowMin = now.getMinutes();
+  const currentSlot = nowHour + (nowMin >= 30 ? 0.5 : 0);
 
   // Header
-  document.getElementById('dateTitle').textContent = formatDate(currentDate);
-  document.getElementById('dateSubtitle').textContent = formatYear(currentDate);
+  document.getElementById('dateWeekday').textContent = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+  document.getElementById('dateMain').textContent = currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  document.getElementById('todayBtn').classList.toggle('visible', !today);
 
-  const todayBtn = document.getElementById('todayBtn');
-  todayBtn.classList.toggle('visible', !today);
-
-  // Day badge
   const badgeEl = document.getElementById('dayBadge');
   if (dayType === 'office') {
-    badgeEl.innerHTML = '<span class="day-badge office">🏢 In Office</span>';
+    badgeEl.innerHTML = '<span class="day-badge office">In Office</span>';
   } else if (dayType === 'remote') {
-    badgeEl.innerHTML = '<span class="day-badge remote">🏠 Remote</span>';
+    badgeEl.innerHTML = '<span class="day-badge remote">Remote</span>';
   } else {
-    badgeEl.innerHTML = '<span class="day-badge" style="background:#F3E5F5;color:#7B1FA2">🌙 Weekend</span>';
+    badgeEl.innerHTML = '<span class="day-badge weekend">Weekend</span>';
   }
 
   // Tasks
   const tasks = getTasksForDate(currentDate);
-  const nowMin = new Date().getMinutes();
-  const currentSlot = nowHour + (nowMin >= 30 ? 0.5 : 0);
-
-  // Timeline
   const timeline = document.getElementById('timeline');
   let html = '';
 
@@ -555,15 +680,13 @@ function render() {
     const slotTasks = tasks.filter(t => t.hour === slot);
     const isCurrent = today && slot === currentSlot;
     const isEmpty = slotTasks.length === 0;
-    const isHalfHour = slot % 1 === 0.5;
+    const isOnHour = slot % 1 === 0;
 
-    html += `<div class="time-block ${isCurrent ? 'current-hour' : ''} ${isEmpty ? 'empty' : ''} ${isHalfHour ? 'half-hour' : ''}" data-hour="${slot}">`;
-    html += `<div class="time-label">${formatSlot(slot)}</div>`;
-    html += `<div class="block-tasks" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)">`;
+    html += `<div class="time-block ${isCurrent ? 'current-slot' : ''} ${isEmpty ? 'empty' : ''} ${isOnHour ? 'on-hour' : 'half-hour'}" data-hour="${slot}">`;
+    html += `<div class="time-gutter"><div class="time-label">${formatSlot(slot)}</div></div>`;
+    html += `<div class="time-content" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)">`;
 
-    slotTasks.forEach(task => {
-      html += renderTask(task);
-    });
+    slotTasks.forEach(task => { html += renderTask(task); });
 
     if (isEmpty) {
       html += `<div class="drop-zone" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)"></div>`;
@@ -574,12 +697,9 @@ function render() {
 
   timeline.innerHTML = html;
 
-  // Scroll to current hour if today
   if (today) {
-    const currentBlock = document.querySelector('.current-hour');
-    if (currentBlock) {
-      setTimeout(() => currentBlock.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-    }
+    const cur = document.querySelector('.current-slot');
+    if (cur) setTimeout(() => cur.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
   }
 }
 
@@ -600,11 +720,17 @@ function renderTask(task) {
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
-      <span class="task-title">${escHtml(task.title)}</span>
-      ${tagHtml}
+      <div class="task-body">
+        <div class="task-title">${escHtml(task.title)}</div>
+        ${tagHtml ? '<div class="task-meta">' + tagHtml + '</div>' : ''}
+      </div>
       <div class="task-actions">
-        <button class="task-action-btn" onclick="editTask('${task.id}')" aria-label="Edit">✎</button>
-        <button class="task-action-btn delete" onclick="deleteTask('${task.id}')" aria-label="Delete">✕</button>
+        <button class="task-action-btn" onclick="editTask('${task.id}')" aria-label="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        </button>
+        <button class="task-action-btn delete" onclick="deleteTask('${task.id}')" aria-label="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
       </div>
     </div>`;
 }
@@ -624,16 +750,13 @@ function toggleTask(id) {
 }
 
 function deleteTask(id) {
-  const tasks = getTasks().filter(t => t.id !== id);
-  saveTasks(tasks);
+  saveTasks(getTasks().filter(t => t.id !== id));
   render();
 }
 
 function editTask(id) {
-  const tasks = getTasks();
-  const task = tasks.find(t => t.id === id);
+  const task = getTasks().find(t => t.id === id);
   if (!task) return;
-
   editingTaskId = id;
   document.getElementById('modalTitle').textContent = 'Edit Task';
   document.getElementById('saveTaskBtn').textContent = 'Save';
@@ -655,7 +778,7 @@ function closeModal() {
   document.getElementById('taskModal').classList.remove('open');
   editingTaskId = null;
   document.getElementById('taskNameInput').value = '';
-  document.getElementById('modalTitle').textContent = 'Add Task';
+  document.getElementById('modalTitle').textContent = 'New Task';
   document.getElementById('saveTaskBtn').textContent = 'Add Task';
   document.getElementById('taskRecurrence').parentElement.style.display = '';
 }
@@ -663,7 +786,6 @@ function closeModal() {
 function saveTask() {
   const name = document.getElementById('taskNameInput').value.trim();
   if (!name) return;
-
   const hour = parseFloat(document.getElementById('taskHourSelect').value);
   const type = document.getElementById('taskTypeSelect').value;
   const recurrence = document.getElementById('taskRecurrence').value;
@@ -671,31 +793,16 @@ function saveTask() {
   if (editingTaskId) {
     const tasks = getTasks();
     const t = tasks.find(t => t.id === editingTaskId);
-    if (t) {
-      t.title = name;
-      t.hour = hour;
-      t.type = type;
-      saveTasks(tasks);
-    }
+    if (t) { t.title = name; t.hour = hour; t.type = type; saveTasks(tasks); }
   } else if (recurrence !== 'none') {
-    // Save as recurring
     const recs = getRecurring();
     recs.push({ id: uid(), title: name, hour, type, recurrence });
     saveRecurring(recs);
   } else {
-    // One-time task
     const tasks = getTasks();
-    tasks.push({
-      id: uid(),
-      title: name,
-      hour,
-      date: dateKey(currentDate),
-      completed: false,
-      type
-    });
+    tasks.push({ id: uid(), title: name, hour, date: dateKey(currentDate), completed: false, type });
     saveTasks(tasks);
   }
-
   closeModal();
   render();
 }
@@ -704,21 +811,20 @@ function saveTask() {
 function openRecurringModal() {
   const recs = getRecurring();
   const list = document.getElementById('recurringList');
-
   if (recs.length === 0) {
-    list.innerHTML = '<li style="text-align:center;padding:20px;color:var(--text-muted)">No recurring tasks yet. Add one with the + button.</li>';
+    list.innerHTML = '<li style="text-align:center;padding:24px;color:var(--text-tertiary);font-size:14px">No recurring tasks yet</li>';
   } else {
     list.innerHTML = recs.map(r => `
       <li class="recurring-item">
         <div class="info">
           <div class="name">${escHtml(r.title)}</div>
-          <div class="meta">${formatHour(r.hour)} · ${r.recurrence} · ${r.type === 'any' ? 'All days' : r.type}</div>
+          <div class="meta">${formatHour(r.hour)} &middot; ${r.recurrence} &middot; ${r.type === 'any' ? 'All days' : r.type}</div>
         </div>
-        <button class="task-action-btn delete" onclick="deleteRecurring('${r.id}')" aria-label="Delete">✕</button>
-      </li>
-    `).join('');
+        <button class="task-action-btn delete" onclick="deleteRecurring('${r.id}')" aria-label="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </li>`).join('');
   }
-
   document.getElementById('recurringModal').classList.add('open');
 }
 
@@ -727,11 +833,8 @@ function closeRecurringModal() {
 }
 
 function deleteRecurring(id) {
-  const recs = getRecurring().filter(r => r.id !== id);
-  saveRecurring(recs);
-  // Also remove future instances
-  const tasks = getTasks().filter(t => t.recurringId !== id);
-  saveTasks(tasks);
+  saveRecurring(getRecurring().filter(r => r.id !== id));
+  saveTasks(getTasks().filter(t => t.recurringId !== id));
   openRecurringModal();
   render();
 }
@@ -744,26 +847,21 @@ function onDragStart(e, id) {
   e.target.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
 }
-
 function onDragEnd(e) {
   e.target.classList.remove('dragging');
   document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
 }
-
 function onDragOver(e) {
   e.preventDefault();
   e.currentTarget.classList.add('drag-over');
 }
-
 function onDragLeave(e) {
   e.currentTarget.classList.remove('drag-over');
 }
-
 function onDrop(e, hour) {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
   if (!draggedTaskId) return;
-
   const tasks = getTasks();
   const t = tasks.find(t => t.id === draggedTaskId);
   if (t) { t.hour = hour; saveTasks(tasks); }
@@ -784,14 +882,11 @@ function goToday() {
 }
 
 // Touch swipe
-let touchStartX = 0;
-let touchStartY = 0;
-
+let touchStartX = 0, touchStartY = 0;
 document.addEventListener('touchstart', e => {
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
-
 document.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = e.changedTouches[0].clientY - touchStartY;
@@ -812,19 +907,13 @@ document.getElementById('fabAdd').addEventListener('click', () => {
 });
 
 // Close modals on overlay click
-document.getElementById('taskModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
-});
-document.getElementById('recurringModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeRecurringModal();
-});
+document.getElementById('taskModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('recurringModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeRecurringModal(); });
 
 // Enter key
-document.getElementById('taskNameInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveTask();
-});
+document.getElementById('taskNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveTask(); });
 
-// Populate time slot select (30-min increments)
+// Populate time slot select
 const hourSelect = document.getElementById('taskHourSelect');
 const nowH = new Date().getHours();
 const nowM = new Date().getMinutes();
@@ -839,11 +928,7 @@ for (let slot = START_HOUR; slot <= END_HOUR; slot += 0.5) {
 
 // ======== INIT ========
 render();
-
-// Auto-refresh every minute to update current hour highlight
 setInterval(() => { if (isToday(currentDate)) render(); }, 60000);
-
-// PWA Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
