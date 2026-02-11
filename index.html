@@ -114,8 +114,10 @@
     margin: 0 -8px;
     padding: 4px 8px;
   }
-  .time-block.empty { min-height: 32px; opacity: 0.5; }
+  .time-block.empty { min-height: 28px; opacity: 0.5; }
   .time-block.empty .time-label { font-size: 12px; }
+  .time-block.half-hour { border-bottom: 1px dashed var(--border); }
+  .time-block.half-hour .time-label { font-size: 12px; color: var(--text-light); }
   .time-label {
     width: 52px; flex-shrink: 0;
     font-size: 13px; font-weight: 600;
@@ -459,12 +461,15 @@ function isToday(d) {
   const t = new Date(); t.setHours(0,0,0,0);
   return d.getTime() === t.getTime();
 }
-function formatHour(h) {
-  if (h === 0) return '12 AM';
-  if (h < 12) return h + ' AM';
-  if (h === 12) return '12 PM';
-  return (h - 12) + ' PM';
+function formatSlot(slot) {
+  const h = Math.floor(slot);
+  const m = slot % 1 === 0.5 ? '30' : '00';
+  let hour = h % 12 || 12;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  return hour + ':' + m + ' ' + ampm;
 }
+// Keep for recurring modal display compat
+function formatHour(h) { return formatSlot(h); }
 
 // ======== GENERATE ID ========
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -539,26 +544,29 @@ function render() {
 
   // Tasks
   const tasks = getTasksForDate(currentDate);
+  const nowMin = new Date().getMinutes();
+  const currentSlot = nowHour + (nowMin >= 30 ? 0.5 : 0);
 
   // Timeline
   const timeline = document.getElementById('timeline');
   let html = '';
 
-  for (let h = START_HOUR; h <= END_HOUR; h++) {
-    const hourTasks = tasks.filter(t => t.hour === h);
-    const isCurrent = today && h === nowHour;
-    const isEmpty = hourTasks.length === 0;
+  for (let slot = START_HOUR; slot <= END_HOUR; slot += 0.5) {
+    const slotTasks = tasks.filter(t => t.hour === slot);
+    const isCurrent = today && slot === currentSlot;
+    const isEmpty = slotTasks.length === 0;
+    const isHalfHour = slot % 1 === 0.5;
 
-    html += `<div class="time-block ${isCurrent ? 'current-hour' : ''} ${isEmpty ? 'empty' : ''}" data-hour="${h}">`;
-    html += `<div class="time-label">${formatHour(h)}</div>`;
-    html += `<div class="block-tasks" data-hour="${h}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${h})" ondragleave="onDragLeave(event)">`;
+    html += `<div class="time-block ${isCurrent ? 'current-hour' : ''} ${isEmpty ? 'empty' : ''} ${isHalfHour ? 'half-hour' : ''}" data-hour="${slot}">`;
+    html += `<div class="time-label">${formatSlot(slot)}</div>`;
+    html += `<div class="block-tasks" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)">`;
 
-    hourTasks.forEach(task => {
+    slotTasks.forEach(task => {
       html += renderTask(task);
     });
 
     if (isEmpty) {
-      html += `<div class="drop-zone" data-hour="${h}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${h})" ondragleave="onDragLeave(event)"></div>`;
+      html += `<div class="drop-zone" data-hour="${slot}" ondragover="onDragOver(event)" ondrop="onDrop(event, ${slot})" ondragleave="onDragLeave(event)"></div>`;
     }
 
     html += `</div></div>`;
@@ -630,7 +638,7 @@ function editTask(id) {
   document.getElementById('modalTitle').textContent = 'Edit Task';
   document.getElementById('saveTaskBtn').textContent = 'Save';
   document.getElementById('taskNameInput').value = task.title;
-  document.getElementById('taskHourSelect').value = task.hour;
+  document.getElementById('taskHourSelect').value = String(task.hour);
   document.getElementById('taskTypeSelect').value = task.type || 'any';
   document.getElementById('taskRecurrence').value = 'none';
   document.getElementById('taskRecurrence').parentElement.style.display = 'none';
@@ -656,7 +664,7 @@ function saveTask() {
   const name = document.getElementById('taskNameInput').value.trim();
   if (!name) return;
 
-  const hour = parseInt(document.getElementById('taskHourSelect').value);
+  const hour = parseFloat(document.getElementById('taskHourSelect').value);
   const type = document.getElementById('taskTypeSelect').value;
   const recurrence = document.getElementById('taskRecurrence').value;
 
@@ -816,15 +824,16 @@ document.getElementById('taskNameInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') saveTask();
 });
 
-// Populate hour select
+// Populate time slot select (30-min increments)
 const hourSelect = document.getElementById('taskHourSelect');
-for (let h = START_HOUR; h <= END_HOUR; h++) {
+const nowH = new Date().getHours();
+const nowM = new Date().getMinutes();
+const defaultSlot = (nowH >= START_HOUR && nowH <= END_HOUR) ? nowH + (nowM >= 30 ? 0.5 : 0) : 9;
+for (let slot = START_HOUR; slot <= END_HOUR; slot += 0.5) {
   const opt = document.createElement('option');
-  opt.value = h;
-  opt.textContent = formatHour(h);
-  // Default to current hour or 9 AM
-  const now = new Date().getHours();
-  if (h === (now >= START_HOUR && now <= END_HOUR ? now : 9)) opt.selected = true;
+  opt.value = slot;
+  opt.textContent = formatSlot(slot);
+  if (slot === defaultSlot) opt.selected = true;
   hourSelect.appendChild(opt);
 }
 
