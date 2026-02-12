@@ -984,7 +984,7 @@ function getTasksForDate(date) {
       saveTasks(tasks);
     }
   });
-  return allTasks;
+  return allTasks.filter(t => !t.dismissed);
 }
 
 // ======== RENDER ========
@@ -1215,7 +1215,15 @@ function spawnConfetti(anchor) {
 
 function deleteTask(id) {
   expandedTasks.delete(id);
-  saveTasks(getTasks().filter(t => t.id !== id));
+  const tasks = getTasks();
+  const task = tasks.find(t => t.id === id);
+  if (task && task.recurringId) {
+    // Mark as dismissed so recurring doesn't recreate it
+    task.dismissed = true;
+    saveTasks(tasks);
+  } else {
+    saveTasks(tasks.filter(t => t.id !== id));
+  }
   render();
 }
 
