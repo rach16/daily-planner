@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Daily Planner</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -872,12 +873,45 @@ currentDate.setHours(0,0,0,0);
 let editingTaskId = null;
 let expandedTasks = new Set();
 
-// ======== STORAGE ========
+// ======== SUPABASE ========
+const SUPABASE_URL = 'https://ertmoasccqnvbximpmdg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_BpjTtr_XFGMFiTxiinCbTQ_qJSXO3MO';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ======== STORAGE (localStorage + cloud sync) ========
 function loadData(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; }
   catch { return fallback; }
 }
-function saveData(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function saveData(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+  // Fire-and-forget cloud sync
+  sb.from('planner_store').upsert({ key, data: val, updated_at: new Date().toISOString() }).then();
+}
+
+async function syncFromCloud() {
+  try {
+    const { data, error } = await sb.from('planner_store').select('*');
+    if (error) throw error;
+    if (data && data.length > 0) {
+      data.forEach(row => {
+        localStorage.setItem(row.key, JSON.stringify(row.data));
+      });
+    } else {
+      // First time: push existing localStorage data to cloud
+      const tasks = loadData('planner_tasks', []);
+      const recurring = loadData('planner_recurring', []);
+      if (tasks.length > 0) {
+        await sb.from('planner_store').upsert({ key: 'planner_tasks', data: tasks, updated_at: new Date().toISOString() });
+      }
+      if (recurring.length > 0) {
+        await sb.from('planner_store').upsert({ key: 'planner_recurring', data: recurring, updated_at: new Date().toISOString() });
+      }
+    }
+  } catch (e) {
+    console.warn('Cloud sync failed, using local data:', e.message);
+  }
+}
 
 function getTasks() { return loadData('planner_tasks', []); }
 function saveTasks(tasks) { saveData('planner_tasks', tasks); }
@@ -1519,7 +1553,8 @@ hourSelect.addEventListener('change', () => {
 });
 
 // ======== INIT ========
-render();
+// Sync from cloud first, then render
+syncFromCloud().then(() => render()).catch(() => render());
 setInterval(() => { if (isToday(currentDate)) render(); }, 60000);
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
