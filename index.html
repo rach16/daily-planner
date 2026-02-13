@@ -272,6 +272,15 @@
 
   .task-body { flex: 1; min-width: 0; }
 
+  .task-color-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
   .task-title {
     font-size: 14px; font-weight: 500;
     line-height: 1.35;
@@ -581,7 +590,7 @@
     padding: 4px 0;
   }
   .color-swatch {
-    width: 32px; height: 32px;
+    width: 38px; height: 38px;
     border-radius: 50%;
     border: 3px solid transparent;
     cursor: pointer;
@@ -603,6 +612,7 @@
     border-radius: 50%;
     transform: translate(-50%, -50%);
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    pointer-events: none;
   }
   .color-swatch[data-color="indigo"] { background: #4F46E5; }
   .color-swatch[data-color="blue"] { background: #2563EB; }
@@ -1120,7 +1130,7 @@ function renderTask(task, inBlock) {
         </svg>
       </div>
       <div class="task-body">
-        <div class="task-title">${escHtml(task.title)}</div>
+        <div class="task-title"><span class="task-color-dot" style="background:${COLOR_HEX[task.color] || COLOR_HEX.indigo}"></span>${escHtml(task.title)}</div>
         <div class="task-time">${task.completed ? '&#10003; ' : ''}${timeStr}</div>
         <div class="task-meta">
           ${task.completed ? '<span class="done-badge">Done</span>' : ''}
@@ -1150,6 +1160,7 @@ function escHtml(s) {
 }
 
 // ======== COLOR PICKER ========
+const COLOR_HEX = { indigo:'#4F46E5', blue:'#2563EB', emerald:'#059669', amber:'#D97706', rose:'#E11D48', cyan:'#0891B2', violet:'#7C3AED', orange:'#EA580C' };
 let selectedColor = 'indigo';
 
 function pickColor(el) {
