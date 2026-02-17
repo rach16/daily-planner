@@ -740,6 +740,85 @@
   .subtask-item:hover .subtask-delete { opacity: 0.6; }
   .subtask-delete:hover { opacity: 1 !important; color: var(--danger); background: var(--danger-soft); }
 
+  /* ===== POMODORO TIMER ===== */
+  .pomo-play-btn {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: var(--primary-soft);
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--primary);
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  .pomo-play-btn svg { width: 11px; height: 11px; }
+  .pomo-play-btn:active { transform: scale(0.85); }
+  .pomo-play-btn:hover { background: var(--primary); color: white; }
+
+  .pomo-play-btn.running::after {
+    content: '';
+    position: absolute; inset: -3px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    opacity: 0;
+    animation: pomoPulse 1.5s ease-out infinite;
+  }
+  @keyframes pomoPulse {
+    0% { opacity: 0.6; transform: scale(0.9); }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+
+  .pomo-play-btn.on-break { background: var(--success-soft); color: var(--success); }
+  .pomo-play-btn.on-break:hover { background: var(--success); color: white; }
+  .pomo-play-btn.on-break.running::after { border-color: var(--success); }
+
+  .pomo-timer {
+    font-size: 11px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    background: var(--primary-soft);
+    color: var(--primary);
+    padding: 1px 7px;
+    border-radius: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1.5;
+  }
+  .pomo-timer.pomo-break-display {
+    background: var(--success-soft);
+    color: var(--success);
+  }
+
+  .pomo-count-badge {
+    font-size: 11px; font-weight: 700;
+    background: #FEF3C7;
+    color: #92400E;
+    padding: 1px 6px;
+    border-radius: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1.5;
+  }
+
+  .subtask-item.pomo-work {
+    background: rgba(79,70,229,0.06);
+    border-left: 3px solid var(--primary);
+    padding-left: 5px;
+  }
+  .subtask-item.pomo-break {
+    background: rgba(5,150,105,0.06);
+    border-left: 3px solid var(--success);
+    padding-left: 5px;
+  }
+
+  .subtask-item.pomo-work .subtask-title,
+  .subtask-item.pomo-break .subtask-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   /* Subtask inline input row */
   .subtask-add-row {
     display: flex; align-items: center; gap: 6px;
@@ -981,6 +1060,17 @@ let currentDate = new Date();
 currentDate.setHours(0,0,0,0);
 let editingTaskId = null;
 let expandedTasks = new Set();
+
+// ======== POMODORO TIMER STATE ========
+const pomodoroTimer = {
+  taskId: null, subtaskId: null,
+  phase: 'idle',        // 'idle' | 'work' | 'break' | 'paused'
+  remaining: 0,         // seconds
+  intervalId: null,
+  pausedPhase: null,    // phase before pause ('work' or 'break')
+  WORK_DURATION: 25 * 60,
+  BREAK_DURATION: 5 * 60
+};
 
 // ======== SUPABASE ========
 const SUPABASE_URL = 'https://ertmoasccqnvbximpmdg.supabase.co';
@@ -1285,14 +1375,55 @@ function renderTask(task, inBlock) {
   let subtaskListHtml = '';
   subtaskListHtml += `<div class="subtask-list ${isExpanded ? 'open' : ''}" id="subtasks-${task.id}">`;
   subtasks.forEach(st => {
+    const isActiveTimer = pomodoroTimer.subtaskId === st.id && pomodoroTimer.phase !== 'idle';
+    const isWork = isActiveTimer && pomodoroTimer.phase === 'work';
+    const isBreak = isActiveTimer && pomodoroTimer.phase === 'break';
+    const isPaused = isActiveTimer && pomodoroTimer.phase === 'paused';
+    const isRunning = isWork || isBreak;
+    const pomoCount = st.pomodoros || 0;
+
+    let rowClass = 'subtask-item';
+    if (st.done) rowClass += ' done';
+    if (isWork || (isPaused && pomodoroTimer.pausedPhase === 'work')) rowClass += ' pomo-work';
+    if (isBreak || (isPaused && pomodoroTimer.pausedPhase === 'break')) rowClass += ' pomo-break';
+
+    // Play/pause button icon
+    let playIcon;
+    if (isRunning) {
+      // Pause icon
+      playIcon = `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>`;
+    } else {
+      // Play icon
+      playIcon = `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"></polygon></svg>`;
+    }
+
+    let btnClass = 'pomo-play-btn';
+    if (isRunning) btnClass += ' running';
+    if (isBreak || (isPaused && pomodoroTimer.pausedPhase === 'break')) btnClass += ' on-break';
+
+    // Timer countdown (only on active subtask)
+    let timerHtml = '';
+    if (isActiveTimer) {
+      const displayClass = (isBreak || (isPaused && pomodoroTimer.pausedPhase === 'break')) ? 'pomo-timer pomo-break-display' : 'pomo-timer';
+      timerHtml = `<span class="${displayClass}" id="pomo-countdown-${st.id}">${formatPomoTime(pomodoroTimer.remaining)}</span>`;
+    }
+
+    // Pomo count badge
+    const countHtml = pomoCount > 0 ? `<span class="pomo-count-badge">\u{1F345} ${pomoCount}</span>` : '';
+
     subtaskListHtml += `
-      <div class="subtask-item ${st.done ? 'done' : ''}" data-subtask-id="${st.id}">
+      <div class="${rowClass}" data-subtask-id="${st.id}">
         <div class="subtask-checkbox" onclick="toggleSubtask('${task.id}','${st.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
         <span class="subtask-title">${escHtml(st.title)}</span>
+        ${countHtml}
+        ${timerHtml}
+        <button class="${btnClass}" onclick="togglePomodoroPlay('${task.id}','${st.id}')" aria-label="Pomodoro timer">
+          ${playIcon}
+        </button>
         <button class="subtask-delete" onclick="deleteSubtask('${task.id}','${st.id}')" aria-label="Delete subtask">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
@@ -1366,6 +1497,8 @@ function setPickerColor(color) {
 
 // ======== TASK ACTIONS ========
 function toggleTask(id) {
+  // Stop timer if completing a parent task that has the active timer
+  if (pomodoroTimer.taskId === id) stopPomodoro(false);
   const tasks = getTasks();
   const t = tasks.find(t => t.id === id);
   if (!t) return;
@@ -1413,6 +1546,8 @@ function spawnConfetti(anchor) {
 }
 
 function deleteTask(id) {
+  // Stop timer if it's on a subtask of the deleted task
+  if (pomodoroTimer.taskId === id) stopPomodoro(false);
   expandedTasks.delete(id);
   const tasks = getTasks();
   const task = tasks.find(t => t.id === id);
@@ -1458,7 +1593,7 @@ function addSubtask(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
   if (!task.subtasks) task.subtasks = [];
-  task.subtasks.push({ id: uid(), title: title, done: false });
+  task.subtasks.push({ id: uid(), title: title, done: false, pomodoros: 0 });
   // If parent was completed, uncomplete it since we added new work
   if (task.completed) task.completed = false;
   saveTasks(tasks);
@@ -1536,6 +1671,8 @@ function spawnMiniConfetti(anchor) {
 }
 
 function deleteSubtask(taskId, subtaskId) {
+  // Stop timer if it's on the deleted subtask
+  if (pomodoroTimer.subtaskId === subtaskId) stopPomodoro(false);
   const tasks = getTasks();
   const task = tasks.find(t => t.id === taskId);
   if (!task || !task.subtasks) return;
@@ -1548,6 +1685,168 @@ function deleteSubtask(taskId, subtaskId) {
   }
   saveTasks(tasks);
   render();
+}
+
+// ======== POMODORO FUNCTIONS ========
+function formatPomoTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function startPomodoro(taskId, subtaskId) {
+  // Stop any running timer first
+  if (pomodoroTimer.intervalId) clearInterval(pomodoroTimer.intervalId);
+  pomodoroTimer.taskId = taskId;
+  pomodoroTimer.subtaskId = subtaskId;
+  pomodoroTimer.phase = 'work';
+  pomodoroTimer.pausedPhase = null;
+  pomodoroTimer.remaining = pomodoroTimer.WORK_DURATION;
+  pomodoroTimer.intervalId = setInterval(tickPomodoro, 1000);
+  render();
+}
+
+function pausePomodoro() {
+  if (pomodoroTimer.phase !== 'work' && pomodoroTimer.phase !== 'break') return;
+  clearInterval(pomodoroTimer.intervalId);
+  pomodoroTimer.intervalId = null;
+  pomodoroTimer.pausedPhase = pomodoroTimer.phase;
+  pomodoroTimer.phase = 'paused';
+  render();
+}
+
+function resumePomodoro() {
+  if (pomodoroTimer.phase !== 'paused') return;
+  pomodoroTimer.phase = pomodoroTimer.pausedPhase;
+  pomodoroTimer.pausedPhase = null;
+  pomodoroTimer.intervalId = setInterval(tickPomodoro, 1000);
+  render();
+}
+
+function stopPomodoro(increment) {
+  if (pomodoroTimer.intervalId) clearInterval(pomodoroTimer.intervalId);
+  if (increment && pomodoroTimer.taskId && pomodoroTimer.subtaskId) {
+    const tasks = getTasks();
+    const task = tasks.find(t => t.id === pomodoroTimer.taskId);
+    if (task && task.subtasks) {
+      const st = task.subtasks.find(s => s.id === pomodoroTimer.subtaskId);
+      if (st) {
+        st.pomodoros = (st.pomodoros || 0) + 1;
+        saveTasks(tasks);
+      }
+    }
+  }
+  pomodoroTimer.taskId = null;
+  pomodoroTimer.subtaskId = null;
+  pomodoroTimer.phase = 'idle';
+  pomodoroTimer.remaining = 0;
+  pomodoroTimer.intervalId = null;
+  pomodoroTimer.pausedPhase = null;
+  render();
+}
+
+function tickPomodoro() {
+  if (pomodoroTimer.phase !== 'work' && pomodoroTimer.phase !== 'break') return;
+  pomodoroTimer.remaining--;
+  if (pomodoroTimer.remaining <= 0) {
+    // Phase ended
+    if (pomodoroTimer.phase === 'work') {
+      // Work done → start break
+      notifyPomodoroPhase('break');
+      pomodoroTimer.phase = 'break';
+      pomodoroTimer.remaining = pomodoroTimer.BREAK_DURATION;
+      render();
+    } else {
+      // Break done → cycle complete, increment count
+      notifyPomodoroPhase('done');
+      const tasks = getTasks();
+      const task = tasks.find(t => t.id === pomodoroTimer.taskId);
+      if (task && task.subtasks) {
+        const st = task.subtasks.find(s => s.id === pomodoroTimer.subtaskId);
+        if (st) {
+          st.pomodoros = (st.pomodoros || 0) + 1;
+          saveTasks(tasks);
+        }
+      }
+      clearInterval(pomodoroTimer.intervalId);
+      pomodoroTimer.intervalId = null;
+      pomodoroTimer.phase = 'idle';
+      pomodoroTimer.remaining = 0;
+      pomodoroTimer.taskId = null;
+      pomodoroTimer.subtaskId = null;
+      pomodoroTimer.pausedPhase = null;
+      render();
+    }
+    return;
+  }
+  // Targeted DOM update — no full render
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('pomo-countdown-' + pomodoroTimer.subtaskId);
+  if (el) el.textContent = formatPomoTime(pomodoroTimer.remaining);
+}
+
+function togglePomodoroPlay(taskId, subtaskId) {
+  if (pomodoroTimer.phase === 'idle') {
+    // Nothing running, start new
+    startPomodoro(taskId, subtaskId);
+  } else if (pomodoroTimer.subtaskId === subtaskId) {
+    // Same subtask
+    if (pomodoroTimer.phase === 'paused') {
+      resumePomodoro();
+    } else {
+      pausePomodoro();
+    }
+  } else {
+    // Different subtask — stop current, start new
+    startPomodoro(taskId, subtaskId);
+  }
+}
+
+function notifyPomodoroPhase(phase) {
+  // Audio notification using Web Audio API
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (phase === 'break') {
+      // 2 ascending tones
+      [440, 554].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = 0.15;
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.2);
+        osc.stop(ctx.currentTime + i * 0.2 + 0.15);
+      });
+    } else if (phase === 'done') {
+      // 3 ascending tones
+      [523, 659, 784].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = 0.15;
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.2);
+        osc.stop(ctx.currentTime + i * 0.2 + 0.18);
+      });
+    }
+  } catch (e) { /* Audio not available */ }
+
+  // Browser notification
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    if (Notification.permission === 'granted') {
+      const title = phase === 'break' ? 'Time for a break!' : 'Pomodoro complete!';
+      const body = phase === 'break' ? '5 minute break starting now.' : 'Great focus session! Take a moment.';
+      new Notification(title, { body, icon: 'icon-192.png' });
+    }
+  }
 }
 
 function editTask(id) {
