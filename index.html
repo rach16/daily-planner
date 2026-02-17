@@ -1090,6 +1090,90 @@ const pomodoroTimer = {
   BREAK_DURATION: 5 * 60
 };
 
+function savePomodoroState() {
+  if (pomodoroTimer.phase === 'idle') {
+    localStorage.removeItem('pomo_state');
+    return;
+  }
+  localStorage.setItem('pomo_state', JSON.stringify({
+    taskId: pomodoroTimer.taskId,
+    subtaskId: pomodoroTimer.subtaskId,
+    phase: pomodoroTimer.phase,
+    remaining: pomodoroTimer.remaining,
+    pausedPhase: pomodoroTimer.pausedPhase,
+    savedAt: Date.now()
+  }));
+}
+
+function restorePomodoroState() {
+  try {
+    const raw = localStorage.getItem('pomo_state');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (!s.taskId || !s.subtaskId || !s.phase || s.phase === 'idle') return;
+    // Verify the subtask still exists
+    const tasks = getTasks();
+    const task = tasks.find(t => t.id === s.taskId);
+    if (!task || !task.subtasks || !task.subtasks.find(st => st.id === s.subtaskId)) {
+      localStorage.removeItem('pomo_state');
+      return;
+    }
+    pomodoroTimer.taskId = s.taskId;
+    pomodoroTimer.subtaskId = s.subtaskId;
+    pomodoroTimer.pausedPhase = s.pausedPhase;
+    if (s.phase === 'paused') {
+      // Paused — remaining stays as saved
+      pomodoroTimer.phase = 'paused';
+      pomodoroTimer.remaining = s.remaining;
+    } else {
+      // Was running — subtract elapsed time
+      const elapsed = Math.floor((Date.now() - s.savedAt) / 1000);
+      const left = s.remaining - elapsed;
+      if (left > 0) {
+        pomodoroTimer.phase = s.phase;
+        pomodoroTimer.remaining = left;
+        pomodoroTimer.intervalId = setInterval(tickPomodoro, 1000);
+      } else {
+        // Timer would have ended — figure out where we are
+        handleOfflineTimerCompletion(s, elapsed);
+        return;
+      }
+    }
+    // Expand the parent task so timer is visible
+    expandedTasks.add(s.taskId);
+  } catch (e) {
+    localStorage.removeItem('pomo_state');
+  }
+}
+
+function handleOfflineTimerCompletion(s, elapsed) {
+  const tasks = getTasks();
+  const task = tasks.find(t => t.id === s.taskId);
+  const st = task && task.subtasks ? task.subtasks.find(sub => sub.id === s.subtaskId) : null;
+  if (s.phase === 'work') {
+    // Work ended — check if break also finished
+    const breakLeft = pomodoroTimer.BREAK_DURATION - (elapsed - s.remaining);
+    if (breakLeft > 0) {
+      // Still in break phase
+      pomodoroTimer.taskId = s.taskId;
+      pomodoroTimer.subtaskId = s.subtaskId;
+      pomodoroTimer.phase = 'break';
+      pomodoroTimer.remaining = breakLeft;
+      pomodoroTimer.intervalId = setInterval(tickPomodoro, 1000);
+      expandedTasks.add(s.taskId);
+      savePomodoroState();
+    } else {
+      // Full cycle completed while away
+      if (st) { st.pomodoros = (st.pomodoros || 0) + 1; saveTasks(tasks); }
+      localStorage.removeItem('pomo_state');
+    }
+  } else if (s.phase === 'break') {
+    // Break ended while away — increment count
+    if (st) { st.pomodoros = (st.pomodoros || 0) + 1; saveTasks(tasks); }
+    localStorage.removeItem('pomo_state');
+  }
+}
+
 // ======== SUPABASE ========
 const SUPABASE_URL = 'https://ertmoasccqnvbximpmdg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_BpjTtr_XFGMFiTxiinCbTQ_qJSXO3MO';
@@ -1753,6 +1837,7 @@ function startPomodoro(taskId, subtaskId) {
   pomodoroTimer.pausedPhase = null;
   pomodoroTimer.remaining = workDuration;
   pomodoroTimer.intervalId = setInterval(tickPomodoro, 1000);
+  savePomodoroState();
   render();
 }
 
@@ -1762,6 +1847,7 @@ function pausePomodoro() {
   pomodoroTimer.intervalId = null;
   pomodoroTimer.pausedPhase = pomodoroTimer.phase;
   pomodoroTimer.phase = 'paused';
+  savePomodoroState();
   render();
 }
 
@@ -1770,6 +1856,7 @@ function resumePomodoro() {
   pomodoroTimer.phase = pomodoroTimer.pausedPhase;
   pomodoroTimer.pausedPhase = null;
   pomodoroTimer.intervalId = setInterval(tickPomodoro, 1000);
+  savePomodoroState();
   render();
 }
 
@@ -1792,6 +1879,7 @@ function stopPomodoro(increment) {
   pomodoroTimer.remaining = 0;
   pomodoroTimer.intervalId = null;
   pomodoroTimer.pausedPhase = null;
+  savePomodoroState();
   render();
 }
 
@@ -1805,6 +1893,7 @@ function tickPomodoro() {
       notifyPomodoroPhase('break');
       pomodoroTimer.phase = 'break';
       pomodoroTimer.remaining = pomodoroTimer.BREAK_DURATION;
+      savePomodoroState();
       render();
     } else {
       // Break done → cycle complete, increment count
@@ -1825,6 +1914,7 @@ function tickPomodoro() {
       pomodoroTimer.taskId = null;
       pomodoroTimer.subtaskId = null;
       pomodoroTimer.pausedPhase = null;
+      savePomodoroState();
       render();
     }
     return;
@@ -2112,6 +2202,7 @@ hourSelect.addEventListener('change', () => {
 });
 
 // ======== INIT ========
+restorePomodoroState();
 checkAuth();
 setInterval(() => { if (isToday(currentDate)) render(); }, 60000);
 if ('serviceWorker' in navigator) {
