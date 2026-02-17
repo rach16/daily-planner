@@ -1092,30 +1092,28 @@ const pomodoroTimer = {
 
 function savePomodoroState() {
   if (pomodoroTimer.phase === 'idle') {
-    localStorage.removeItem('pomo_state');
+    saveData('pomo_state', null);
     return;
   }
-  localStorage.setItem('pomo_state', JSON.stringify({
+  saveData('pomo_state', {
     taskId: pomodoroTimer.taskId,
     subtaskId: pomodoroTimer.subtaskId,
     phase: pomodoroTimer.phase,
     remaining: pomodoroTimer.remaining,
     pausedPhase: pomodoroTimer.pausedPhase,
     savedAt: Date.now()
-  }));
+  });
 }
 
 function restorePomodoroState() {
   try {
-    const raw = localStorage.getItem('pomo_state');
-    if (!raw) return;
-    const s = JSON.parse(raw);
-    if (!s.taskId || !s.subtaskId || !s.phase || s.phase === 'idle') return;
+    const s = loadData('pomo_state', null);
+    if (!s || !s.taskId || !s.subtaskId || !s.phase || s.phase === 'idle') return;
     // Verify the subtask still exists
     const tasks = getTasks();
     const task = tasks.find(t => t.id === s.taskId);
     if (!task || !task.subtasks || !task.subtasks.find(st => st.id === s.subtaskId)) {
-      localStorage.removeItem('pomo_state');
+      saveData('pomo_state', null);
       return;
     }
     pomodoroTimer.taskId = s.taskId;
@@ -1142,7 +1140,7 @@ function restorePomodoroState() {
     // Expand the parent task so timer is visible
     expandedTasks.add(s.taskId);
   } catch (e) {
-    localStorage.removeItem('pomo_state');
+    saveData('pomo_state', null);
   }
 }
 
@@ -1165,12 +1163,12 @@ function handleOfflineTimerCompletion(s, elapsed) {
     } else {
       // Full cycle completed while away
       if (st) { st.pomodoros = (st.pomodoros || 0) + 1; saveTasks(tasks); }
-      localStorage.removeItem('pomo_state');
+      saveData('pomo_state', null);
     }
   } else if (s.phase === 'break') {
     // Break ended while away — increment count
     if (st) { st.pomodoros = (st.pomodoros || 0) + 1; saveTasks(tasks); }
-    localStorage.removeItem('pomo_state');
+    saveData('pomo_state', null);
   }
 }
 
