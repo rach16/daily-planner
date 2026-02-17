@@ -812,6 +812,24 @@
     padding-left: 5px;
   }
 
+  .pomo-duration-btn {
+    font-size: 10px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    background: var(--border);
+    color: var(--text-secondary);
+    border: none;
+    padding: 1px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1.5;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pomo-duration-btn:hover { background: var(--primary-soft); color: var(--primary); }
+  .pomo-duration-btn:active { transform: scale(0.9); }
+
   .subtask-item.pomo-work .subtask-title,
   .subtask-item.pomo-break .subtask-title {
     overflow: hidden;
@@ -1411,6 +1429,12 @@ function renderTask(task, inBlock) {
     // Pomo count badge
     const countHtml = pomoCount > 0 ? `<span class="pomo-count-badge">\u{1F345} ${pomoCount}</span>` : '';
 
+    // Duration badge (show when timer is NOT running on this subtask)
+    const stDuration = st.pomoDuration || 25;
+    const durationHtml = !isActiveTimer
+      ? `<button class="pomo-duration-btn" onclick="cyclePomoDuration('${task.id}','${st.id}')" title="Click to change duration">${stDuration}m</button>`
+      : '';
+
     subtaskListHtml += `
       <div class="${rowClass}" data-subtask-id="${st.id}">
         <div class="subtask-checkbox" onclick="toggleSubtask('${task.id}','${st.id}')">
@@ -1420,6 +1444,7 @@ function renderTask(task, inBlock) {
         </div>
         <span class="subtask-title">${escHtml(st.title)}</span>
         ${countHtml}
+        ${durationHtml}
         ${timerHtml}
         <button class="${btnClass}" onclick="togglePomodoroPlay('${task.id}','${st.id}')" aria-label="Pomodoro timer">
           ${playIcon}
@@ -1688,20 +1713,45 @@ function deleteSubtask(taskId, subtaskId) {
 }
 
 // ======== POMODORO FUNCTIONS ========
+const POMO_PRESETS = [15, 25, 30, 45, 60];
+
 function formatPomoTime(seconds) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return m + ':' + String(s).padStart(2, '0');
 }
 
+function cyclePomoDuration(taskId, subtaskId) {
+  // Don't allow changing duration while timer is running on this subtask
+  if (pomodoroTimer.subtaskId === subtaskId && pomodoroTimer.phase !== 'idle') return;
+  const tasks = getTasks();
+  const task = tasks.find(t => t.id === taskId);
+  if (!task || !task.subtasks) return;
+  const st = task.subtasks.find(s => s.id === subtaskId);
+  if (!st) return;
+  const current = st.pomoDuration || 25;
+  const idx = POMO_PRESETS.indexOf(current);
+  st.pomoDuration = POMO_PRESETS[(idx + 1) % POMO_PRESETS.length];
+  saveTasks(tasks);
+  render();
+}
+
 function startPomodoro(taskId, subtaskId) {
   // Stop any running timer first
   if (pomodoroTimer.intervalId) clearInterval(pomodoroTimer.intervalId);
+  // Get custom duration for this subtask
+  const tasks = getTasks();
+  const task = tasks.find(t => t.id === taskId);
+  let workDuration = pomodoroTimer.WORK_DURATION;
+  if (task && task.subtasks) {
+    const st = task.subtasks.find(s => s.id === subtaskId);
+    if (st && st.pomoDuration) workDuration = st.pomoDuration * 60;
+  }
   pomodoroTimer.taskId = taskId;
   pomodoroTimer.subtaskId = subtaskId;
   pomodoroTimer.phase = 'work';
   pomodoroTimer.pausedPhase = null;
-  pomodoroTimer.remaining = pomodoroTimer.WORK_DURATION;
+  pomodoroTimer.remaining = workDuration;
   pomodoroTimer.intervalId = setInterval(tickPomodoro, 1000);
   render();
 }
